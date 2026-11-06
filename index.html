@@ -103,14 +103,44 @@ tr:last-child td{border-bottom:none}
 .muted{color:var(--muted)}
 .note{font-size:.82rem;color:var(--muted);margin-top:8px}
 /* Reconhecimentos: o elemento de destaque do painel */
-.awards{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.award{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--brand-orange);border-radius:8px;padding:18px}
-.award .kind{color:var(--gold);font-weight:600;font-size:.85rem}
-.award .who{font-family:"IBM Plex Serif",Georgia,serif;font-size:1.45rem;margin:6px 0 4px}
-.award .why{color:var(--muted);font-size:.85rem}
-.award ul{margin:10px 0 0;padding-left:18px;font-size:.86rem}
-.award ul li{margin-bottom:4px}
-.award .none{color:var(--muted);font-style:italic}
+.rec-hero{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between;margin-bottom:18px}
+.rec-hero .eyebrow{color:var(--gold);font-weight:600;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase}
+.rec-hero h2{font-family:"IBM Plex Serif",Georgia,serif;font-size:1.5rem;margin-top:4px;text-wrap:balance}
+.awards{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.award{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;overflow:hidden;display:flex;flex-direction:column;gap:10px}
+.award::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,var(--brand-purple),var(--brand-orange))}
+.award .head{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+.award .ico{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--gold-soft);color:var(--gold);flex:none}
+.award .ico svg{width:22px;height:22px}
+.award .kind{color:var(--ink);font-weight:600;font-size:.95rem}
+.award .crit{color:var(--muted);font-size:.75rem}
+.award .winner{display:flex;align-items:center;gap:12px;position:relative;z-index:1;margin-top:4px}
+.avatars{display:flex;flex:none}
+.avatar{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:1.05rem;color:#fff;background:linear-gradient(135deg,var(--brand-purple),var(--brand-orange));border:3px solid var(--surface)}
+.avatars .avatar+.avatar{margin-left:-14px}
+.avatar.empty{background:var(--surface-2);color:var(--muted);border-color:var(--line)}
+.award .who{font-family:"IBM Plex Serif",Georgia,serif;font-size:1.3rem;line-height:1.2}
+.award .metric{font-size:1.6rem;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;position:relative;z-index:1}
+.award .why{color:var(--muted);font-size:.85rem;position:relative;z-index:1}
+.award .why.none{font-style:italic}
+.award .excl{font-size:.8rem;background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 10px;position:relative;z-index:1}
+.award blockquote{margin:0;padding:8px 12px;border-left:3px solid var(--brand-orange);background:var(--surface-2);border-radius:0 8px 8px 0;font-size:.86rem;font-style:italic}
+.hist th,.hist td{text-align:left}
+.hist td{white-space:normal;min-width:130px;vertical-align:top}
+.hist td .sub{display:block;color:var(--muted);font-size:.75rem}
+.hist td.none{color:var(--muted);font-style:italic}
+/* Mapa de calor dos sábados */
+.heat td{text-align:center;padding:6px;min-width:62px}
+.heat td:first-child,.heat th:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1}
+.heat th{text-align:center}
+.cell{border-radius:6px;padding:6px 4px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.cell small{display:block;font-weight:400;font-size:.68rem;opacity:.85}
+.cell.folga{background:var(--surface-2);color:var(--muted);font-weight:500}
+.cell.ferias{background:var(--gold-soft);color:var(--gold);font-weight:500}
+.cell.zero{background:var(--bad-soft);color:var(--bad)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:.78rem;color:var(--muted);margin-top:10px}
+.legend .sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:5px}
+.legend .ramp{width:90px;height:10px;border-radius:5px;background:linear-gradient(90deg,color-mix(in srgb,var(--brand-purple) 12%,var(--surface)),var(--brand-purple))}
 .list{margin:0;padding:0;list-style:none}
 .list li{padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem}
 .list li:last-child{border-bottom:none}
@@ -165,6 +195,7 @@ tr:last-child td{border-bottom:none}
       <div class="grid two">
         <div class="panel"><h3>Produtividade</h3><div class="chart-box"><canvas id="chProd"></canvas></div></div>
         <div class="panel"><h3>Nota média de monitoria</h3><div class="chart-box"><canvas id="chMon"></canvas></div></div>
+        <div class="panel"><h3>Taxa de abandono das recebidas</h3><div class="chart-box"><canvas id="chAband"></canvas></div><p class="note">Fila da equipe toda: recebidas não atendidas ÷ total de recebidas.</p></div>
       </div>
       <div class="group-title"><h2>Por colaborador</h2><small>no período selecionado</small></div>
       <div class="table-wrap"><table id="tblAgents"></table></div>
@@ -175,40 +206,43 @@ tr:last-child td{border-bottom:none}
 
     <!-- PAUSAS -->
     <section class="view" id="v-pausas">
-      <div class="context">Descanso: 15 minutos com 30 segundos de tolerância (acima de 15min30s é infração). Dias úteis com só uma pausa descanso são apontados. Particular acima de 15 minutos no dia é apenas um marcador, não infração.</div>
+      <div class="context">Descanso: 15 minutos com 30 segundos de tolerância (acima de 15min30s é infração). Dias úteis com só uma pausa descanso são apontados. Particular acima de 15 minutos no dia aparece só como contagem e é apenas um marcador, não infração.</div>
       <div class="table-wrap"><table id="tblPausaResumo"></table></div>
       <div class="grid two" style="margin-top:14px">
-        <div class="panel"><h3>Infrações de descanso</h3><div class="table-wrap" style="margin-top:8px;max-height:420px;overflow:auto"><table id="tblInfr"></table></div></div>
-        <div class="panel"><h3>Dias com uma só pausa descanso</h3><div class="table-wrap" style="margin-top:8px;max-height:420px;overflow:auto"><table id="tblUmDesc"></table></div></div>
+        <div class="panel"><h3>Infrações de descanso por mês</h3><div class="chart-box"><canvas id="chInfr"></canvas></div></div>
+        <div class="panel"><h3>Duração média do descanso</h3><div class="chart-box"><canvas id="chDesc"></canvas></div><p class="note">A linha tracejada marca o limite de 15min30s.</p></div>
       </div>
-      <div class="panel" style="margin-top:14px"><h3>Marcador: particular acima de 15 min no dia</h3><div class="table-wrap" style="margin-top:8px;max-height:420px;overflow:auto"><table id="tblPart"></table></div></div>
+      <div class="grid two" style="margin-top:14px">
+        <div class="panel"><h3>Infrações de descanso</h3><div class="table-wrap" style="margin-top:8px;max-height:420px;overflow:auto"><table id="tblInfr"></table></div></div>
+        <div class="panel"><h3>Dias úteis com uma só pausa descanso</h3><div class="table-wrap" style="margin-top:8px;max-height:420px;overflow:auto"><table id="tblUmDesc"></table></div><p class="note">Só segunda a sexta. Sábados e domingos não entram.</p></div>
+      </div>
     </section>
 
     <!-- SÁBADOS -->
     <section class="view" id="v-sabados">
       <div class="context">Sábado sem nenhum registro do colaborador (nem ligação, nem chat, nem pausa) é folga e não entra como improdutividade.</div>
       <div class="table-wrap"><table id="tblSabResumo"></table></div>
-      <div class="group-title"><h2>Sábado a sábado</h2></div>
-      <div class="table-wrap"><table id="tblSab"></table></div>
+      <div class="panel" style="margin-top:14px"><h3>Sábado comparado ao dia útil</h3><div class="chart-box"><canvas id="chSab"></canvas></div></div>
+      <div class="group-title"><h2>Sábado a sábado</h2><small>produtividade de cada colaborador em cada sábado</small></div>
+      <div class="table-wrap"><table class="heat" id="tblSab"></table></div>
+      <div class="legend"><span><span class="ramp" style="display:inline-block;vertical-align:-1px;margin-right:5px"></span>menor → maior produtividade</span><span><span class="sw" style="background:var(--bad-soft)"></span>trabalhou sem produção</span><span><span class="sw" style="background:var(--surface-2);border:1px solid var(--line)"></span>folga</span><span><span class="sw" style="background:var(--gold-soft)"></span>férias</span></div>
     </section>
 
     <!-- RECONHECIMENTOS -->
     <section class="view" id="v-reconhecimentos">
-      <div class="filters" style="margin-bottom:16px"><label>Mês do reconhecimento <select id="fRecMonth"></select></label></div>
+      <div class="rec-hero">
+        <div><div class="eyebrow">Reconhecimentos do mês</div><h2 id="recTitle"></h2></div>
+        <div class="filters"><label>Mês do reconhecimento <select id="fRecMonth"></select></label></div>
+      </div>
       <div class="grid awards" id="awards"></div>
-      <div class="grid two" style="margin-top:18px">
-        <div class="panel"><h3>Destaque em Monitoria mês a mês</h3><div class="table-wrap" style="margin-top:8px"><table id="tblMonWin"></table></div></div>
-        <div class="panel"><h3>Crescimento de produtividade no mês</h3><div class="table-wrap" style="margin-top:8px"><table id="tblGrowth"></table></div></div>
-      </div>
-      <div class="grid two" style="margin-top:14px">
-        <div class="panel"><h3>Parceiro do Mês: médias</h3><div class="table-wrap" style="margin-top:8px"><table id="tblParc"></table></div><p class="note">Notas 0 e em branco são desconsideradas.</p></div>
-        <div class="panel"><h3>Atitude de Impacto: citações</h3><div class="table-wrap" style="margin-top:8px"><table id="tblAtit"></table></div><p class="note">Empate é decidido pela melhor média no Parceiro do Mês.</p></div>
-      </div>
+      <div class="group-title"><h2>Histórico de vencedores</h2><small>mês a mês</small></div>
+      <div class="table-wrap"><table class="hist" id="tblHist"></table></div>
+      <p class="note">Crescimento: quem esteve de férias no mês ou no mês anterior não concorre. Parceiro do Mês: notas 0 e em branco são desconsideradas. Atitude de Impacto: empate decidido pela melhor média no Parceiro do Mês.</p>
     </section>
 
     <!-- OCORRÊNCIAS -->
     <section class="view" id="v-ocorrencias">
-      <div class="context">Justificativas de aumento ou redução de produção: ausências, férias, redução de quadro, desligamentos e quedas individuais.</div>
+      <div class="context">Justificativas de aumento ou redução de produção, lidas da aba Ocorrências da planilha. O último dia informado das férias ainda é férias; a volta é no dia seguinte.</div>
       <div class="panel"><ul class="list" id="ocAll"></ul></div>
     </section>
   </main>
@@ -227,7 +261,7 @@ const SOURCES = {
   monitoria:  PUB + '1307253287',
   pausa:      PUB + '1855059554',
   parceiro:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW8iuoSszRcvvAzXe_gC6tmpHSx8oAVuR0BBFtJY8n0EJaeHCS_KLjolFu-n3TvoT02iMsg5GinlYu/pub?output=csv',
-  ocorrencias: '' // cole aqui o link CSV da aba de ocorrências quando ela existir
+  ocorrencias: PUB + '246131137'
 };
 // Equipe avaliada (a chave é o primeiro nome, em minúsculas e sem acento)
 const TEAM = [
@@ -281,6 +315,11 @@ const fmt1 = n => isFinite(n) ? n.toLocaleString('pt-BR',{minimumFractionDigits:
 const fmtPct = n => isFinite(n) ? n.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%' : '–';
 const fmtDur = s => { if(!isFinite(s)) return '–'; s = Math.round(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60; return (h? h+'h':'') + String(m).padStart(h?2:1,'0') + 'min' + String(x).padStart(2,'0') + 's'; };
 const fmtDay = dk => dk.split('-').reverse().join('/');
+const DIAS = ['dom','seg','ter','qua','qui','sex','sáb'];
+const dowOf = dk => { const [y,m,d] = dk.split('-').map(Number); return new Date(y, m-1, d).getDay(); };
+const fmtDayW = dk => DIAS[dowOf(dk)] + ' ' + fmtDay(dk);
+const addDays = (dk, n) => { const [y,m,d] = dk.split('-').map(Number); const x = new Date(y, m-1, d+n); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; };
+const initials = n => n.split(/\s+/).filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase();
 const fmtMonth = mk => { const [y,m] = mk.split('-'); return MESES[+m-1] + '/' + y; };
 const prevMonth = mk => { let [y,m] = mk.split('-').map(Number); m--; if(!m){m=12;y--;} return `${y}-${String(m).padStart(2,'0')}`; };
 const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : NaN;
@@ -303,7 +342,7 @@ function load(name, url){
   });
 }
 
-const DB = { days:new Map(), recNA:new Map(), mon:[], sat:[], pausas:[], form:[], oc:[], months:new Set() };
+const DB = { days:new Map(), recNA:new Map(), recTot:new Map(), ferias:[], mon:[], sat:[], pausas:[], form:[], oc:[], months:new Set() };
 function day(agent, dt){
   if(!DB.days.has(agent)) DB.days.set(agent, new Map());
   const m = DB.days.get(agent);
@@ -323,6 +362,7 @@ function ingest(raw){
   { const [h,...rows] = raw.recebidas;
     const iA = col(h,'nome do agente','agente'), iD = col(h,'data inicio','data'), iS = col(h,'status'), iT = col(h,'tempo em lig');
     for(const r of rows){ const dt = parseDate(r[iD]); if(!dt) continue; const a = canon(r[iA]);
+      DB.recTot.set(dt.mk, (DB.recTot.get(dt.mk)||0)+1);
       if(a && norm(r[iS]) === 'atendida'){ const d = day(a, dt); d.recAt++; d.recSec += dur(r[iT]); }
       else if(!r[iA] || norm(r[iS]) !== 'atendida'){ DB.recNA.set(dt.mk, (DB.recNA.get(dt.mk)||0)+1); } } }
   // Chat
@@ -361,23 +401,39 @@ function ingest(raw){
       const ref = dt.mk === '2026-05' ? dt.mk : prevMonth(dt.mk);
       const notas = {}; for(const c of notaCols){ const v = num(r[c.i]); if(isFinite(v) && v > 0) notas[c.name] = v; }
       DB.form.push({ref, notas, citado:canon(r[iCit], ALL_PEOPLE), atitude:String(r[iAt]||'').trim()}); } }
-  // Ocorrências (opcional)
+  // Ocorrências (opcional). Formato da aba: data, colaborador, ocorrência.
+  // "Início das férias" abre um período e "Fim das férias" fecha (o dia do fim ainda é férias).
   if(raw.ocorrencias){ const [h,...rows] = raw.ocorrencias;
-    const iI = col(h,'data de inicio','data inicio','inicio','data'), iF = col(h,'data de fim','data fim','fim'), iC = col(h,'colaborador'), iT = col(h,'tipo'), iM = col(h,'impacto'), iJ = col(h,'justificativa');
-    for(const r of rows){ const di = parseDate(r[iI]); if(!di) continue; const df = parseDate(r[iF]) || di;
-      DB.oc.push({ini:di.dk, fim:df.dk, quem: canon(r[iC]) || (r[iC]||'Equipe'), tipo:r[iT]||'', impacto:r[iM]||'', just:r[iJ]||''}); }
+    const iD = col(h,'data'), iC = col(h,'colaborador'), iO = col(h,'ocorrencia','ocorr');
+    const ev = rows.map(r => ({dt:parseDate(r[iD]), quem:canon(r[iC]) || String(r[iC]||'').trim() || 'Equipe', txt:String(r[iO]||'').trim()})).filter(x => x.dt).sort((a,b)=> a.dt.dk < b.dt.dk ? -1 : 1);
+    const aberto = {};
+    for(const x of ev){ const o = norm(x.txt);
+      if(o.includes('ferias') && (o.startsWith('inicio') || o.startsWith('comeco'))){ aberto[x.quem] = x.dt.dk; }
+      else if(o.includes('ferias') && (o.startsWith('fim') || o.startsWith('termino') || o.startsWith('retorno'))){
+        const ini = aberto[x.quem] || x.dt.dk; delete aberto[x.quem];
+        DB.ferias.push({agent:x.quem, ini, fim:x.dt.dk}); }
+      else DB.oc.push({ini:x.dt.dk, fim:x.dt.dk, quem:x.quem, tipo:x.txt || 'Ocorrência', impacto:'', just:''}); }
+    for(const [quem, ini] of Object.entries(aberto)) DB.ferias.push({agent:quem, ini, fim:null}); // férias ainda em andamento
+    for(const f of DB.ferias) DB.oc.push({ini:f.ini, fim:f.fim || '9999-12-31', quem:f.agent, tipo:'Férias', impacto:'Redução de produção',
+      just: f.fim ? `Férias de ${fmtDay(f.ini)} a ${fmtDay(f.fim)}, volta em ${fmtDay(addDays(f.fim,1))}.` : `Férias desde ${fmtDay(f.ini)}, sem data de fim informada.`});
     DB.oc.sort((a,b)=> a.ini < b.ini ? 1 : -1); }
 }
 
 /* ---------- Cálculos ---------- */
 const inRange = (mk, s, e) => mk >= s && mk <= e;
+const monthEnd = mk => { const [y,m] = mk.split('-').map(Number); return `${mk}-${String(new Date(y, m, 0).getDate()).padStart(2,'0')}`; };
+// períodos de férias do colaborador que tocam o mês
+function feriasNoMes(agent, mk){ const a = mk + '-01', b = monthEnd(mk); return DB.ferias.filter(f => f.agent === agent && f.ini <= b && (f.fim || '9999-12-31') >= a); }
+function emFerias(agent, dk){ return DB.ferias.some(f => f.agent === agent && f.ini <= dk && (f.fim || '9999-12-31') >= dk); }
+const feriasTxt = f => f.fim ? `${fmtDay(f.ini)} a ${fmtDay(f.fim)}` : `desde ${fmtDay(f.ini)}`;
 function stats(agent, s, e){
   const days = [...(DB.days.get(agent)?.values() || [])].filter(d => inRange(d.mk, s, e));
-  const o = {agent, dias:days.length, real:0, ef:0, efSec:0, recAt:0, chA:0, chR:0, chSec:0, chEsp:0, chEspN:0};
-  for(const d of days){ for(const k of ['real','ef','efSec','recAt','chA','chR','chSec','chEsp','chEspN']) o[k] += d[k]; }
+  const o = {agent, dias:days.length, real:0, ef:0, efSec:0, recAt:0, recSec:0, chA:0, chR:0, chSec:0, chEsp:0, chEspN:0};
+  for(const d of days){ for(const k of ['real','ef','efSec','recAt','recSec','chA','chR','chSec','chEsp','chEspN']) o[k] += d[k]; }
   o.prod = o.ef + o.recAt + o.chA + o.chR;
   o.prodDia = o.dias ? o.prod / o.dias : NaN;
-  o.tma = o.ef ? o.efSec / o.ef : NaN;
+  // TMA: realizadas atendidas acima de 40s + recebidas atendidas
+  o.tma = (o.ef + o.recAt) ? (o.efSec + o.recSec) / (o.ef + o.recAt) : NaN;
   o.taxa = o.real ? o.ef / o.real * 100 : NaN;
   o.chTma = (o.chA+o.chR) ? o.chSec / (o.chA+o.chR) : NaN;
   o.chTme = o.chEspN ? o.chEsp / o.chEspN : NaN;
@@ -458,7 +514,7 @@ function renderGeral(){
       kpi('Produtividade por dia trabalhado', fmt1(o.prodDia), cmpTeam(o.prodDia, team.prodDia, fmt1)),
       kpi('Dias trabalhados', fmtInt(o.dias), cmpTeam(o.dias, team.dias, fmt1)),
       kpi('Chamadas efetivas (acima de 40s)', fmtInt(o.ef), `${fmtPct(o.taxa)} das ${fmtInt(o.real)} realizadas`),
-      kpi('TMA das chamadas efetivas', fmtDur(o.tma), cmpTeam(o.tma, team.tma, fmtDur, false)),
+      kpi('TMA (efetivas + recebidas)', fmtDur(o.tma), cmpTeam(o.tma, team.tma, fmtDur, false)),
       kpi('Recebidas atendidas', fmtInt(o.recAt), cmpTeam(o.recAt, team.recAt, fmt1)),
       kpi('Chats ativos', fmtInt(o.chA), cmpTeam(o.chA, team.chA, fmt1)),
       kpi('Chats receptivos', fmtInt(o.chR), `Espera média do cliente: ${fmtDur(o.chTme)}`)].join('');
@@ -472,11 +528,14 @@ function renderGeral(){
     const monAll = DB.mon.filter(m => agents.includes(m.agent) && inRange(m.mk, s, e));
     const satAll = satStats(DB.sat.filter(x => agents.includes(x.agent) && inRange(x.mk, s, e)));
     const na = monthList(s,e).reduce((x,m)=>x+(DB.recNA.get(m)||0),0);
+    const tot = monthList(s,e).reduce((x,m)=>x+(DB.recTot.get(m)||0),0);
+    const recSec = sum('recSec'), recAt = sum('recAt');
     P = [kpi('Produtividade total', fmtInt(sum('prod')), `Média por colaborador: ${fmt1(team.prod)}`),
       kpi('Média por dia trabalhado', fmt1(team.prodDia), 'por colaborador'),
       kpi('Chamadas efetivas (acima de 40s)', fmtInt(ef), `${fmtPct(real? ef/real*100 : NaN)} das ${fmtInt(real)} realizadas`),
-      kpi('TMA das chamadas efetivas', fmtDur(ef ? efSec/ef : NaN)),
-      kpi('Recebidas atendidas', fmtInt(sum('recAt')), `${fmtInt(na)} não atendidas`),
+      kpi('TMA (efetivas + recebidas)', fmtDur((ef+recAt) ? (efSec+recSec)/(ef+recAt) : NaN), 'realizadas acima de 40s e recebidas atendidas'),
+      kpi('Recebidas atendidas', fmtInt(recAt), `de ${fmtInt(tot)} recebidas`),
+      kpi('Taxa de abandono', fmtPct(tot ? na/tot*100 : NaN), `${fmtInt(na)} de ${fmtInt(tot)} recebidas não atendidas`),
       kpi('Chats ativos', fmtInt(sum('chA'))),
       kpi('Chats receptivos', fmtInt(sum('chR')))].join('');
     Q = [kpi('Monitoria', fmtPct(avg(monAll.map(m=>m.nota))), `${fmtInt(monAll.length)} avaliações`),
@@ -487,8 +546,9 @@ function renderGeral(){
   $('#kpiProd').innerHTML = P; $('#kpiQual').innerHTML = Q;
 
   // Tabela por colaborador
-  const rows = all.map(o => `<tr${state.agent===o.agent?' style="outline:2px solid var(--primary)"':''}><td>${esc(o.agent)}</td><td>${fmtInt(o.prod)}</td><td>${fmtInt(o.dias)}</td><td>${fmt1(o.prodDia)}</td><td>${fmtInt(o.ef)}</td><td>${fmtPct(o.taxa)}</td><td>${fmtDur(o.tma)}</td><td>${fmtInt(o.recAt)}</td><td>${fmtInt(o.chA)}</td><td>${fmtInt(o.chR)}</td><td>${fmtPct(o.mon)}</td><td>${fmtPct(o.sat)}</td><td>${isFinite(o.nps)?fmt1(o.nps):'–'}</td><td>${fmtPct(o.res)}</td><td>${o.infr?`<span class="tag bad">${o.infr}</span>`:'0'}</td></tr>`).join('');
-  $('#tblAgents').innerHTML = `<thead><tr><th>Colaborador</th><th>Produtividade</th><th>Dias</th><th>Por dia</th><th>Chamadas efetivas</th><th>Taxa efetiva</th><th>TMA ligação</th><th>Recebidas</th><th>Chat ativo</th><th>Chat receptivo</th><th>Monitoria</th><th>Satisfação</th><th>NPS</th><th>Resolução</th><th>Infrações descanso</th></tr></thead><tbody>${rows}
+  const ferTag = a => { const f = DB.ferias.filter(x => x.agent === a && x.ini.slice(0,7) <= e && (x.fim||'9999').slice(0,7) >= s); return f.length ? ` <span class="tag warn" title="${esc(f.map(feriasTxt).join('; '))}">férias</span>` : ''; };
+  const rows = all.map(o => `<tr${state.agent===o.agent?' style="outline:2px solid var(--primary)"':''}><td>${esc(o.agent)}${ferTag(o.agent)}</td><td>${fmtInt(o.prod)}</td><td>${fmtInt(o.dias)}</td><td>${fmt1(o.prodDia)}</td><td>${fmtInt(o.ef)}</td><td>${fmtPct(o.taxa)}</td><td>${fmtDur(o.tma)}</td><td>${fmtInt(o.recAt)}</td><td>${fmtInt(o.chA)}</td><td>${fmtInt(o.chR)}</td><td>${fmtPct(o.mon)}</td><td>${fmtPct(o.sat)}</td><td>${isFinite(o.nps)?fmt1(o.nps):'–'}</td><td>${fmtPct(o.res)}</td><td>${o.infr?`<span class="tag bad">${o.infr}</span>`:'0'}</td></tr>`).join('');
+  $('#tblAgents').innerHTML = `<thead><tr><th>Colaborador</th><th>Produtividade</th><th>Dias</th><th>Por dia</th><th>Chamadas efetivas</th><th>Taxa efetiva</th><th>TMA</th><th>Recebidas</th><th>Chat ativo</th><th>Chat receptivo</th><th>Monitoria</th><th>Satisfação</th><th>NPS</th><th>Resolução</th><th>Infrações descanso</th></tr></thead><tbody>${rows}
     <tr class="avg"><td>Média da equipe</td><td>${fmt1(team.prod)}</td><td>${fmt1(team.dias)}</td><td>${fmt1(team.prodDia)}</td><td>${fmt1(team.ef)}</td><td>${fmtPct(team.taxa)}</td><td>${fmtDur(team.tma)}</td><td>${fmt1(team.recAt)}</td><td>${fmt1(team.chA)}</td><td>${fmt1(team.chR)}</td><td>${fmtPct(team.mon)}</td><td>${fmtPct(team.sat)}</td><td>${isFinite(team.nps)?fmt1(team.nps):'–'}</td><td>${fmtPct(team.res)}</td><td>${fmt1(avg(all.map(o=>o.infr)))}</td></tr></tbody>`;
 
   // Gráficos
@@ -500,109 +560,185 @@ function renderGeral(){
   const monFn = (a,m) => avg(DB.mon.filter(x=>x.agent===a && x.mk===m).map(x=>x.nota));
   drawChart('chProd', months, [...ds(prodFn), ...(agent?[teamLine(prodFn)]:[])], false, annotations(months));
   drawChart('chMon', months, [...ds(monFn), ...(agent?[teamLine(monFn)]:[])], true);
+  const abData = months.map(m => { const tt = DB.recTot.get(m)||0; return tt ? (DB.recNA.get(m)||0)/tt*100 : NaN; });
+  drawChart('chAband', months, [{label:'Abandono', data:abData, borderColor:cssVar('--brand-orange'), backgroundColor:cssVar('--brand-orange'), tension:.25, spanGaps:true}], true);
 
   // Ocorrências no período
   const oc = DB.oc.filter(o => o.fim.slice(0,7) >= s && o.ini.slice(0,7) <= e && (!agent || o.quem === agent || norm(o.quem) === 'equipe'));
   $('#ocGeral').innerHTML = ocList(oc);
 }
-function annotations(months){ return months.map(m => DB.oc.filter(o => o.ini.slice(0,7) <= m && o.fim.slice(0,7) >= m)); }
+function annotations(months){ return months.map(m => DB.oc.filter(o => o.ini.slice(0,7) <= m && o.fim.slice(0,7) >= m && (!state.agent || o.quem === state.agent))); }
 function drawChart(id, labels, datasets, pct, notes){
   charts[id]?.destroy();
   const ink = cssVar('--muted'), grid = cssVar('--line');
   charts[id] = new Chart(document.getElementById(id), {
     type:'line', data:{labels:labels.map(fmtMonth), datasets},
     options:{responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
-      scales:{x:{ticks:{color:ink}, grid:{color:grid}}, y:{ticks:{color:ink, callback:v => pct ? v+'%' : v.toLocaleString('pt-BR')}, grid:{color:grid}, ...(pct?{suggestedMax:100}:{beginAtZero:true})}},
+      scales:{x:{ticks:{color:ink}, grid:{color:grid}}, y:{ticks:{color:ink, callback:v => pct ? v+'%' : v.toLocaleString('pt-BR')}, grid:{color:grid}, ...(pct?{suggestedMax:100, ...(id==='chAband'?{beginAtZero:true}:{})}:{beginAtZero:true})}},
       plugins:{legend:{labels:{color:ink, boxWidth:12}},
         tooltip:{callbacks:{label:c => `${c.dataset.label}: ${pct ? fmtPct(c.parsed.y) : fmtInt(c.parsed.y)}`,
-          afterBody: items => { if(!notes) return ''; const n = notes[items[0].dataIndex] || []; return n.length ? ['', 'Ocorrências:', ...n.map(o => `• ${o.quem}: ${o.tipo}${o.just?' – '+o.just:''}`)] : ''; }}}},
+          afterBody: items => { if(!notes) return ''; const n = notes[items[0].dataIndex] || []; return n.length ? ['', 'Ocorrências:', ...n.map(o => `• ${o.quem}: ${o.just || o.tipo}`)] : ''; }}}},
       elements:{point:{radius:4}}}
   });
 }
 function ocList(oc){
-  if(!SOURCES.ocorrencias) return '<li class="muted">A aba de ocorrências ainda não foi conectada. Quando ela existir, cole o link CSV dela na configuração do painel (SOURCES.ocorrencias).</li>';
+  if(!SOURCES.ocorrencias) return '<li class="muted">A aba de ocorrências não está conectada.</li>';
   if(!oc.length) return '<li class="muted">Nenhuma ocorrência registrada neste período.</li>';
-  return oc.map(o => `<li><b>${esc(o.quem)}</b> · ${esc(fmtDay(o.ini))}${o.fim!==o.ini?' a '+esc(fmtDay(o.fim)):''} · ${esc(o.tipo)} ${o.impacto?`<span class="tag ${norm(o.impacto).startsWith('aum')?'good':'warn'}">${esc(o.impacto)}</span>`:''}<br><span class="muted">${esc(o.just)}</span></li>`).join('');
+  return oc.map(o => `<li><b>${esc(o.quem)}</b> · ${esc(o.tipo)} ${o.impacto?`<span class="tag ${norm(o.impacto).startsWith('aum')?'good':'warn'}">${esc(o.impacto)}</span>`:''}<br><span class="muted">${esc(o.just || (fmtDay(o.ini) + (o.fim!==o.ini ? ' a ' + fmtDay(o.fim) : '')))}</span></li>`).join('');
 }
 
 /* ---------- Render: pausas ---------- */
+function agentColor(a){ return cssVar(COLORS[Math.max(0, TEAM.findIndex(t=>t.name===a))%5]); }
+function drawBar(id, labels, datasets, opts = {}){
+  charts[id]?.destroy();
+  const ink = cssVar('--muted'), grid = cssVar('--line');
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'bar', data:{labels, datasets},
+    options:{responsive:true, maintainAspectRatio:false, indexAxis:opts.horizontal ? 'y' : 'x',
+      scales:{x:{ticks:{color:ink, ...(opts.xTick?{callback:opts.xTick}:{})}, grid:{color:grid}, ...(opts.horizontal?{beginAtZero:true, ...(opts.xMax?{suggestedMax:opts.xMax}:{})}:{}), stacked:!!opts.stacked},
+        y:{ticks:{color:ink, precision:0}, grid:{color:grid}, beginAtZero:true, stacked:!!opts.stacked}},
+      plugins:{legend:{display:opts.legend !== false, labels:{color:ink, boxWidth:12}},
+        tooltip:{callbacks:{label:opts.label || (c => `${c.dataset.label}: ${fmtInt(c.parsed[opts.horizontal?'x':'y'])}`), afterBody:opts.after}}}}
+  });
+}
 function renderPausas(){
   const {s, e, agent} = state;
   const agents = agent ? [agent] : activeAgents(s, e);
   const rows = agents.map(a => { const p = pauseStats(a, s, e);
     const desc = DB.pausas.filter(x => x.agent===a && inRange(x.mk,s,e) && x.tipo.startsWith('descanso'));
     const diasUteis = p.days.filter(d => d.dow !== 0 && d.dow !== 6).length;
-    return `<tr><td>${esc(a)}</td><td>${fmtInt(desc.length)}</td><td>${fmtDur(avg(desc.map(x=>x.sec)))}</td><td>${p.infr.length?`<span class="tag bad">${p.infr.length}</span>`:'0'}</td><td>${p.umDesc.length?`<span class="tag warn">${p.umDesc.length}</span>`:'0'}</td><td>${fmtInt(diasUteis)}</td><td>${p.part.length?`<span class="tag off">${p.part.length}</span>`:'0'}</td><td>${fmtDur(avg(p.days.map(d=>d.part)))}</td></tr>`; }).join('');
-  $('#tblPausaResumo').innerHTML = `<thead><tr><th>Colaborador</th><th>Pausas descanso</th><th>Duração média descanso</th><th>Infrações (acima de 15min30s)</th><th>Dias com um só descanso</th><th>Dias úteis com pausa</th><th>Dias com particular acima de 15 min</th><th>Particular médio por dia</th></tr></thead><tbody>${rows}</tbody>`;
+    return `<tr><td>${esc(a)}</td><td>${fmtInt(desc.length)}</td><td>${fmtDur(avg(desc.map(x=>x.sec)))}</td><td>${p.infr.length?`<span class="tag bad">${p.infr.length}</span>`:'0'}</td><td>${p.umDesc.length?`<span class="tag warn">${p.umDesc.length}</span>`:'0'}</td><td>${fmtInt(diasUteis)}</td><td>${p.part.length?`<span class="tag off">${p.part.length}</span>`:'0'}</td></tr>`; }).join('');
+  $('#tblPausaResumo').innerHTML = `<thead><tr><th>Colaborador</th><th>Pausas descanso</th><th>Duração média descanso</th><th>Infrações (acima de 15min30s)</th><th>Dias úteis com um só descanso</th><th>Dias úteis com pausa</th><th>Dias com particular acima de 15 min</th></tr></thead><tbody>${rows}</tbody>`;
+
+  // Gráficos
+  const months = monthList(s, e);
+  drawBar('chInfr', months.map(fmtMonth), agents.map(a => ({label:a, backgroundColor:agentColor(a), borderRadius:4,
+    data: months.map(m => DB.pausas.filter(x => x.agent===a && x.mk===m && x.tipo.startsWith('descanso') && x.sec > LIM_DESCANSO).length)})));
+  const durs = agents.map(a => avg(DB.pausas.filter(x => x.agent===a && inRange(x.mk,s,e) && x.tipo.startsWith('descanso')).map(x=>x.sec)) / 60);
+  drawBar('chDesc', agents, [
+    {label:'Duração média', data:durs, borderRadius:4, backgroundColor: durs.map(v => cssVar(v*60 > LIM_DESCANSO ? '--bad' : '--brand-purple'))},
+    {type:'line', label:'Limite 15min30s', data:agents.map(()=>LIM_DESCANSO/60), borderColor:cssVar('--brand-orange'), borderDash:[6,4], pointRadius:0, fill:false}
+  ], {legend:false, label:c => `${c.dataset.label}: ${fmtDur(c.parsed.y*60)}`});
+  charts.chDesc.options.scales.y.ticks.callback = v => v + ' min'; charts.chDesc.options.scales.y.suggestedMax = 18; charts.chDesc.update();
+
   const all = pauseStats(agent || null, s, e);
   const filt = x => !agent ? TEAM.some(t=>t.name===x.agent) : x.agent === agent;
   const infr = all.infr.filter(filt).sort((a,b)=> a.dk < b.dk ? 1 : -1);
-  $('#tblInfr').innerHTML = `<thead><tr><th>Colaborador</th><th>Data</th><th>Início</th><th>Duração</th><th>Excedeu</th></tr></thead><tbody>${infr.map(x=>`<tr><td>${esc(x.agent)}</td><td>${fmtDay(x.dk)}</td><td>${esc(x.hora)}</td><td>${fmtDur(x.sec)}</td><td>${fmtDur(x.sec-15*60)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nenhuma infração no período.</td></tr>'}</tbody>`;
+  $('#tblInfr').innerHTML = `<thead><tr><th>Colaborador</th><th>Data</th><th>Início</th><th>Duração</th><th>Excedeu</th></tr></thead><tbody>${infr.map(x=>`<tr><td>${esc(x.agent)}</td><td>${fmtDayW(x.dk)}</td><td>${esc(x.hora)}</td><td>${fmtDur(x.sec)}</td><td>${fmtDur(x.sec-15*60)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nenhuma infração no período.</td></tr>'}</tbody>`;
   const um = all.umDesc.filter(filt).sort((a,b)=> a.dk < b.dk ? 1 : -1);
-  $('#tblUmDesc').innerHTML = `<thead><tr><th>Colaborador</th><th>Data</th></tr></thead><tbody>${um.map(x=>`<tr><td>${esc(x.agent)}</td><td>${fmtDay(x.dk)}</td></tr>`).join('') || '<tr><td colspan="2" class="muted">Nenhum dia útil com só uma pausa descanso.</td></tr>'}</tbody>`;
-  const pt = all.part.filter(filt).sort((a,b)=> a.dk < b.dk ? 1 : -1);
-  $('#tblPart').innerHTML = `<thead><tr><th>Colaborador</th><th>Data</th><th>Particular no dia</th></tr></thead><tbody>${pt.map(x=>`<tr><td>${esc(x.agent)}</td><td>${fmtDay(x.dk)}</td><td>${fmtDur(x.part)}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Nenhum dia acima de 15 minutos.</td></tr>'}</tbody>`;
+  $('#tblUmDesc').innerHTML = `<thead><tr><th>Colaborador</th><th>Data</th></tr></thead><tbody>${um.map(x=>`<tr><td>${esc(x.agent)}</td><td>${fmtDayW(x.dk)}</td></tr>`).join('') || '<tr><td colspan="2" class="muted">Nenhum dia útil com só uma pausa descanso.</td></tr>'}</tbody>`;
 }
 
 /* ---------- Render: sábados ---------- */
 function renderSabados(){
   const {s, e, agent} = state;
   const agents = agent ? [agent] : activeAgents(s, e);
+  // todos os sábados do período em que alguém da equipe trabalhou
   const sats = new Set();
-  for(const a of agents) for(const d of (DB.days.get(a)?.values()||[])) if(d.dow === 6 && inRange(d.mk,s,e)) sats.add(d.dk);
-  const list = [...sats].sort().reverse();
+  for(const a of activeAgents(s, e)) for(const d of (DB.days.get(a)?.values()||[])) if(d.dow === 6 && inRange(d.mk,s,e)) sats.add(d.dk);
+  const list = [...sats].sort();
   const get = (a, dk) => DB.days.get(a)?.get(dk);
   const prodOf = d => d ? d.ef + d.recAt + d.chA + d.chR : 0;
-  const resumo = agents.map(a => {
+  const info = agents.map(a => {
     const all = [...(DB.days.get(a)?.values()||[])].filter(d => inRange(d.mk,s,e));
     const sab = all.filter(d => d.dow === 6), uteis = all.filter(d => d.dow !== 6 && d.dow !== 0);
-    const pSab = avg(sab.map(prodOf)), pUtil = avg(uteis.map(prodOf));
-    return `<tr><td>${esc(a)}</td><td>${fmtInt(sab.length)}</td><td>${fmtInt(list.length - sab.length)}</td><td>${fmtInt(sab.reduce((x,d)=>x+prodOf(d),0))}</td><td>${fmt1(pSab)}</td><td>${fmt1(pUtil)}</td><td>${isFinite(pSab)&&pUtil?fmtPct(pSab/pUtil*100):'–'}</td></tr>`; }).join('');
-  $('#tblSabResumo').innerHTML = `<thead><tr><th>Colaborador</th><th>Sábados trabalhados</th><th>Folgas</th><th>Produtividade nos sábados</th><th>Média por sábado</th><th>Média por dia útil</th><th>Sábado vs dia útil</th></tr></thead><tbody>${resumo || '<tr><td colspan="7" class="muted">Sem sábados no período.</td></tr>'}</tbody>`;
-  $('#tblSab').innerHTML = `<thead><tr><th>Sábado</th>${agents.map(a=>`<th>${esc(a)}</th>`).join('')}</tr></thead><tbody>${list.map(dk => `<tr><td>${fmtDay(dk)}</td>${agents.map(a => { const d = get(a, dk);
-    if(!d) return '<td><span class="tag off">Folga</span></td>';
-    const p = prodOf(d); return `<td title="Chamadas efetivas ${d.ef} · Recebidas ${d.recAt} · Chat ativo ${d.chA} · Chat receptivo ${d.chR}">${p ? fmtInt(p) : '<span class="tag warn">0</span>'}<div class="muted" style="font-size:.72rem">${d.ef} lig · ${d.chA} ativo · ${d.chR} recep.</div></td>`; }).join('')}</tr>`).join('') || `<tr><td colspan="${agents.length+1}" class="muted">Sem sábados com registro no período.</td></tr>`}</tbody>`;
+    const fer = list.filter(dk => !get(a,dk) && emFerias(a, dk)).length;
+    return {a, sab, fer, folgas: list.length - sab.length - fer, pSab:avg(sab.map(prodOf)), pUtil:avg(uteis.map(prodOf))};
+  });
+  $('#tblSabResumo').innerHTML = `<thead><tr><th>Colaborador</th><th>Sábados trabalhados</th><th>Folgas</th><th>Sábados de férias</th><th>Produtividade nos sábados</th><th>Média por sábado</th><th>Média por dia útil</th><th>Sábado vs dia útil</th></tr></thead><tbody>${info.map(x => `<tr><td>${esc(x.a)}</td><td>${fmtInt(x.sab.length)}</td><td>${fmtInt(x.folgas)}</td><td>${x.fer?`<span class="tag warn">${x.fer}</span>`:'0'}</td><td>${fmtInt(x.sab.reduce((t,d)=>t+prodOf(d),0))}</td><td>${fmt1(x.pSab)}</td><td>${fmt1(x.pUtil)}</td><td>${isFinite(x.pSab)&&x.pUtil?fmtPct(x.pSab/x.pUtil*100):'–'}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Sem sábados no período.</td></tr>'}</tbody>`;
+
+  drawBar('chSab', agents, [
+    {label:'Média por sábado', data:info.map(x=>x.pSab), backgroundColor:cssVar('--brand-orange'), borderRadius:4},
+    {label:'Média por dia útil', data:info.map(x=>x.pUtil), backgroundColor:cssVar('--brand-purple'), borderRadius:4}
+  ], {label:c => `${c.dataset.label}: ${fmt1(c.parsed.y)}`});
+
+  // mapa de calor: linhas = colaboradores, colunas = sábados
+  const max = Math.max(1, ...agents.flatMap(a => list.map(dk => prodOf(get(a,dk)))));
+  const cell = (a, dk) => {
+    const d = get(a, dk);
+    if(!d) return emFerias(a, dk) ? '<td><div class="cell ferias">Férias</div></td>' : '<td><div class="cell folga">Folga</div></td>';
+    const p = prodOf(d);
+    const tip = `${a} · ${fmtDay(dk)}\nChamadas efetivas: ${d.ef}\nRecebidas: ${d.recAt}\nChat ativo: ${d.chA}\nChat receptivo: ${d.chR}`;
+    if(!p) return `<td title="${esc(tip)}"><div class="cell zero">0<small>sem produção</small></div></td>`;
+    const pct = Math.round(15 + 85 * p / max);
+    return `<td title="${esc(tip)}"><div class="cell" style="background:color-mix(in srgb, var(--brand-purple) ${pct}%, var(--surface));color:${pct > 55 ? '#fff' : 'var(--ink)'}">${fmtInt(p)}</div></td>`;
+  };
+  $('#tblSab').innerHTML = list.length ? `<thead><tr><th>Colaborador</th>${list.map(dk => `<th>${dk.slice(8)}/${dk.slice(5,7)}</th>`).join('')}</tr></thead><tbody>${agents.map(a => `<tr><td>${esc(a)}</td>${list.map(dk => cell(a, dk)).join('')}</tr>`).join('')}</tbody>`
+    : '<tbody><tr><td class="muted">Sem sábados com registro no período.</td></tr></tbody>';
 }
 
 /* ---------- Render: reconhecimentos ---------- */
 function topOf(entries){ const best = Math.max(...entries.map(x=>x.v)); return entries.filter(x => x.v === best); }
 function joinNames(a){ return a.length <= 1 ? (a[0]||'') : a.slice(0,-1).join(', ') + ' e ' + a[a.length-1]; }
-function renderRec(){
-  const m = state.rec, prev = prevMonth(m);
+const fmt2 = v => v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+function awardsFor(m){
+  const prev = prevMonth(m);
   // Monitoria
   const monM = TEAM.map(t => ({n:t.name, v:avg(DB.mon.filter(x=>x.agent===t.name && x.mk===m).map(x=>x.nota))})).filter(x=>isFinite(x.v));
-  const monWin = monM.length ? topOf(monM) : [];
-  // Crescimento
-  const gr = TEAM.map(t => { const c = stats(t.name, m, m), p = stats(t.name, prev, prev); return {n:t.name, cur:c.prod, prev:p.prod, ok:c.dias>0 && p.dias>0 && p.prod>0, v:p.prod ? (c.prod-p.prod)/p.prod*100 : NaN}; }).filter(x => x.ok);
-  const grPos = gr.filter(x => x.v > 0); const grWin = grPos.length ? topOf(grPos) : [];
+  const mon = {win: monM.length ? topOf(monM) : []};
+  // Crescimento: quem esteve de férias no mês ou no anterior não concorre
+  const excl = [];
+  const gr = TEAM.map(t => { const c = stats(t.name, m, m), p = stats(t.name, prev, prev);
+    const fer = [...feriasNoMes(t.name, prev), ...feriasNoMes(t.name, m)];
+    const o = {n:t.name, cur:c.prod, prev:p.prod, ok:c.dias>0 && p.dias>0 && p.prod>0, v:p.prod ? (c.prod-p.prod)/p.prod*100 : NaN};
+    if(o.ok && fer.length){ excl.push({n:t.name, txt:[...new Set(fer.map(feriasTxt))].join('; ')}); o.ok = false; }
+    return o; }).filter(x => x.ok);
+  const grPos = gr.filter(x => x.v > 0);
+  const cres = {win: grPos.length ? topOf(grPos) : [], comparados: gr.length, excl, prev, temAnterior: TEAM.some(t => stats(t.name, prev, prev).dias > 0)};
   // Parceiro do mês
   const resp = DB.form.filter(f => f.ref === m);
   const parc = ALL_PEOPLE.map(p => { const v = resp.map(r => r.notas[p.name]).filter(isFinite); return {n:p.name, v:avg(v), qtd:v.length}; }).filter(x => x.qtd);
-  const parcWin = parc.length ? topOf(parc) : [];
+  const par = {win: parc.length ? topOf(parc) : []};
   // Atitude de impacto
   const cit = {}; for(const r of resp) if(r.citado) cit[r.citado] = (cit[r.citado]||0)+1;
   const citArr = Object.entries(cit).map(([n,v]) => ({n, v, media: parc.find(p=>p.n===n)?.v ?? -1}));
-  let atWin = citArr.length ? topOf(citArr) : [];
-  let desempate = false;
+  let atWin = citArr.length ? topOf(citArr) : [], desempate = false;
   if(atWin.length > 1){ desempate = true; const bm = Math.max(...atWin.map(x=>x.media)); atWin = atWin.filter(x => x.media === bm); }
-  const atitudes = resp.filter(r => atWin.some(w => w.n === r.citado) && r.atitude);
-
-  const card = (kind, who, why, extra='') => `<div class="award"><div class="kind">${kind}</div>${who ? `<div class="who">${esc(who)}</div><div class="why">${why}</div>` : `<div class="none">${why}</div>`}${extra}</div>`;
+  const at = {win: atWin, desempate, atitudes: resp.filter(r => atWin.some(w => w.n === r.citado) && r.atitude).map(r => r.atitude)};
+  return {mon, cres, par, at, temVotacao: resp.length > 0};
+}
+const ICONS = {
+  mon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>',
+  cres:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
+  par:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>',
+  at:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6 .9-4.4 4.3 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.4l6-.9z"/></svg>'
+};
+function renderRec(){
+  const m = state.rec, A = awardsFor(m), prev = A.cres.prev;
+  $('#recTitle').textContent = `Destaques de ${fmtMonth(m)}`;
+  const card = (ico, kind, crit, winners, metric, why, extra='') => `<div class="award">
+    <div class="head"><div class="ico">${ICONS[ico]}</div><div><div class="kind">${kind}</div><div class="crit">${crit}</div></div></div>
+    <div class="winner"><div class="avatars">${winners.length ? winners.map(n => `<div class="avatar" aria-hidden="true">${esc(initials(n))}</div>`).join('') : '<div class="avatar empty" aria-hidden="true">–</div>'}</div>
+      <div class="who">${winners.length ? esc(joinNames(winners)) : '<span class="muted" style="font-size:1rem">Sem vencedor</span>'}</div></div>
+    ${metric ? `<div class="metric">${metric}</div>` : ''}<div class="why${winners.length?'':' none'}">${why}</div>${extra}</div>`;
+  const exclBox = A.cres.excl.length ? `<div class="excl">Não concorrem por férias: ${A.cres.excl.map(x => `${esc(x.n)} (${esc(x.txt)})`).join('; ')}.</div>` : '';
+  const g = A.cres.win[0];
+  const cresWhy = g ? `Produtividade de ${fmtInt(g.prev)} em ${fmtMonth(prev)} para ${fmtInt(g.cur)} em ${fmtMonth(m)}.`
+    : !A.cres.temAnterior ? `Sem dados de ${fmtMonth(prev)} para comparar.`
+    : !A.cres.comparados ? `Ninguém pôde ser comparado entre ${fmtMonth(prev)} e ${fmtMonth(m)}.`
+    : `Ninguém aumentou a produtividade de ${fmtMonth(prev)} para ${fmtMonth(m)}, por isso não há destaque neste mês.`;
   $('#awards').innerHTML = [
-    card('Destaque em Monitoria', joinNames(monWin.map(x=>x.n)), monWin.length ? `Média de ${fmtPct(monWin[0].v)} nas monitorias de ${fmtMonth(m)}.` : 'Sem monitorias registradas neste mês.'),
-    card('Destaque em Crescimento', joinNames(grWin.map(x=>x.n)), grWin.length ? `Produtividade cresceu ${fmtPct(grWin[0].v)} de ${fmtMonth(prev)} para ${fmtMonth(m)} (${fmtInt(grWin[0].prev)} → ${fmtInt(grWin[0].cur)}).` : `Ninguém aumentou a produtividade de ${fmtMonth(prev)} para ${fmtMonth(m)}.`),
-    card('Parceiro do Mês', joinNames(parcWin.map(x=>x.n)), parcWin.length ? `Média de ${parcWin[0].v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} nas avaliações dos colegas${parcWin.length>1?' (empate, os dois são reconhecidos)':''}.` : 'Não houve votação referente a este mês.'),
-    card('Atitude de Impacto', joinNames(atWin.map(x=>x.n)), atWin.length ? `${atWin[0].v} ${atWin[0].v>1?'citações':'citação'} como colega de maior impacto positivo${desempate?', com desempate pela média no Parceiro do Mês':''}.` : 'Não houve votação referente a este mês.',
-      atitudes.length ? `<ul>${atitudes.map(r => `<li>“${esc(r.atitude)}”</li>`).join('')}</ul>` : '')
+    card('mon', 'Destaque em Monitoria', 'maior média nas monitorias do mês', A.mon.win.map(x=>x.n), A.mon.win.length ? fmtPct(A.mon.win[0].v) : '',
+      A.mon.win.length ? `Média das monitorias de ${fmtMonth(m)}.` : 'Sem monitorias registradas neste mês.'),
+    card('cres', 'Destaque em Crescimento', `maior aumento de produtividade sobre ${fmtMonth(prev)}`, A.cres.win.map(x=>x.n), g ? '+' + fmtPct(g.v) : '', cresWhy, exclBox),
+    card('par', 'Parceiro do Mês', 'maior média na avaliação dos colegas', A.par.win.map(x=>x.n), A.par.win.length ? fmt2(A.par.win[0].v) : '',
+      A.par.win.length ? `Média nas avaliações dos colegas${A.par.win.length>1?'. Empate: todos são reconhecidos':''}.` : 'Não houve votação referente a este mês.'),
+    card('at', 'Atitude de Impacto', 'mais citado pelos colegas', A.at.win.map(x=>x.n), A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '',
+      A.at.win.length ? `Citado como colega de maior impacto positivo${A.at.desempate?', com desempate pela média no Parceiro do Mês':''}.` : 'Não houve votação referente a este mês.',
+      A.at.atitudes.slice(0,3).map(t => `<blockquote>“${esc(t)}”</blockquote>`).join(''))
   ].join('');
 
-  // Tabelas de apoio
-  const months = [...DB.months].filter(x => DB.mon.some(y=>y.mk===x)).sort();
-  $('#tblMonWin').innerHTML = `<thead><tr><th>Mês</th><th>Destaque</th><th>Média</th></tr></thead><tbody>${months.map(mm => { const r = TEAM.map(t => ({n:t.name, v:avg(DB.mon.filter(x=>x.agent===t.name && x.mk===mm).map(x=>x.nota))})).filter(x=>isFinite(x.v)); const w = topOf(r);
-    return `<tr${mm===m?' class="avg"':''}><td>${fmtMonth(mm)}</td><td>${esc(joinNames(w.map(x=>x.n)))}</td><td>${fmtPct(w[0]?.v)}</td></tr>`; }).join('')}</tbody>`;
-  $('#tblGrowth').innerHTML = `<thead><tr><th>Colaborador</th><th>${fmtMonth(prev)}</th><th>${fmtMonth(m)}</th><th>Variação</th></tr></thead><tbody>${gr.sort((a,b)=>b.v-a.v).map(x => `<tr><td>${esc(x.n)}</td><td>${fmtInt(x.prev)}</td><td>${fmtInt(x.cur)}</td><td><span class="tag ${x.v>0?'good':'bad'}">${x.v>0?'+':''}${fmtPct(x.v)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem dados nos dois meses.</td></tr>'}</tbody>`;
-  $('#tblParc').innerHTML = `<thead><tr><th>Colaborador</th><th>Média</th><th>Avaliações</th></tr></thead><tbody>${parc.sort((a,b)=>b.v-a.v).map(x => `<tr><td>${esc(x.n)}</td><td>${x.v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${x.qtd}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sem respostas para este mês.</td></tr>'}</tbody>`;
-  $('#tblAtit').innerHTML = `<thead><tr><th>Colaborador</th><th>Citações</th><th>Média Parceiro</th></tr></thead><tbody>${citArr.sort((a,b)=>b.v-a.v || b.media-a.media).map(x => `<tr><td>${esc(x.n)}</td><td>${x.v}</td><td>${x.media>=0 ? x.media.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '–'}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sem respostas para este mês.</td></tr>'}</tbody>`;
+  // Histórico de vencedores
+  const months = [...DB.months].sort().reverse();
+  const td = (names, sub, emptyTxt) => names.length ? `<td><b>${esc(joinNames(names))}</b>${sub?`<span class="sub">${sub}</span>`:''}</td>` : `<td class="none">${emptyTxt}</td>`;
+  $('#tblHist').innerHTML = `<thead><tr><th>Mês</th><th>Monitoria</th><th>Crescimento</th><th>Parceiro do Mês</th><th>Atitude de Impacto</th></tr></thead><tbody>${months.map(mm => { const H = awardsFor(mm);
+    const cw = H.cres.win[0];
+    const cresEmpty = !H.cres.temAnterior ? 'Sem mês anterior para comparar' : (!H.cres.comparados ? 'Ninguém pôde ser comparado' : 'Ninguém cresceu em relação ao mês anterior') + (H.cres.excl.length ? `<span class="sub">De férias: ${esc(H.cres.excl.map(x=>x.n).join(', '))}</span>` : '');
+    return `<tr${mm===m?' class="avg"':''}><td>${fmtMonth(mm)}</td>
+      ${td(H.mon.win.map(x=>x.n), H.mon.win.length ? fmtPct(H.mon.win[0].v) : '', 'Sem monitorias')}
+      ${td(H.cres.win.map(x=>x.n), cw ? '+' + fmtPct(cw.v) + (H.cres.excl.length ? ` · de férias: ${esc(H.cres.excl.map(x=>x.n).join(', '))}` : '') : '', cresEmpty)}
+      ${td(H.par.win.map(x=>x.n), H.par.win.length ? 'média ' + fmt2(H.par.win[0].v) : '', 'Sem votação')}
+      ${td(H.at.win.map(x=>x.n), H.at.win.length ? `${H.at.win[0].v} ${H.at.win[0].v>1?'citações':'citação'}` : '', 'Sem votação')}</tr>`; }).join('')}</tbody>`;
 }
 
 function render(){ renderGeral(); renderPausas(); renderSabados(); renderRec(); $('#ocAll').innerHTML = ocList(DB.oc.filter(o => !state.agent || o.quem === state.agent || norm(o.quem)==='equipe')); }
