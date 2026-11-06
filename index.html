@@ -135,6 +135,13 @@ tr:last-child td{border-bottom:none}
 .hist td{white-space:normal;min-width:130px;vertical-align:top}
 .hist td .sub{display:block;color:var(--muted);font-size:.75rem}
 .hist td.none{color:var(--muted);font-style:italic}
+.btn-art{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--brand-purple),var(--brand-orange));color:#fff;border:none;font-weight:600;padding:8px 14px;border-radius:8px}
+.btn-art .i{width:17px;height:17px}
+#artDlg{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:16px;width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto}
+#artDlg::backdrop{background:rgb(0 0 0 / .55)}
+.art-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.art-actions{display:flex;gap:8px}
+#artBox .spin{width:34px;height:34px;margin:40px auto;border-radius:50%;border:3px solid var(--primary-soft);border-top-color:var(--brand-purple);animation:spin 1s linear infinite}
 /* Mapa de calor dos sábados */
 .heat td{text-align:center;padding:6px;min-width:62px}
 .heat td:first-child,.heat th:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1}
@@ -272,8 +279,12 @@ nav.tabs button .i{width:18px;height:18px}
     <section class="view" id="v-reconhecimentos">
       <div class="rec-hero">
         <div><div class="eyebrow">Reconhecimentos do mês</div><h2 id="recTitle"></h2></div>
-        <div class="filters"><label>Mês do reconhecimento <select id="fRecMonth"></select></label></div>
+        <div class="filters"><label>Mês do reconhecimento <select id="fRecMonth"></select></label><button id="btnArt" class="btn-art" type="button" data-icon="download">Gerar arte do mês</button></div>
       </div>
+      <dialog id="artDlg" aria-label="Arte dos reconhecimentos">
+        <div class="art-head"><b>Arte para o grupo</b><div class="art-actions"><button id="artSave" class="btn-art" type="button" data-icon="download">Baixar imagem</button><button id="artClose" type="button">Fechar</button></div></div>
+        <div id="artBox"></div>
+      </dialog>
       <div class="grid awards" id="awards"></div>
       <div class="group-title"><h2 data-icon="history">Histórico de vencedores</h2><small>mês a mês</small></div>
       <div class="table-wrap"><table class="hist" id="tblHist"></table></div>
@@ -397,6 +408,7 @@ const IC = {
   alert:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
   plane:'<path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/>',
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'
 };
 const ic = n => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||''}</svg>`;
@@ -837,6 +849,96 @@ function renderRec(){
       ${td(H.par.win.map(x=>x.n), H.par.win.length ? 'média ' + fmt2(H.par.win[0].v) : '', 'Sem votação')}
       ${td(H.at.win.map(x=>x.n), H.at.win.length ? `${H.at.win[0].v} ${H.at.win[0].v>1?'citações':'citação'}` : '', 'Sem votação')}</tr>`; }).join('')}</tbody>`;
 }
+
+/* ---------- Arte dos reconhecimentos (imagem para o grupo) ---------- */
+const MESES_LONGOS = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+const iconImg = (n, color) => loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`));
+function rr(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+function fitText(ctx, txt, maxW, size, weight, family){ let s = size; do { ctx.font = `${weight} ${s}px ${family}`; s -= 2; } while(ctx.measureText(txt).width > maxW && s > 14); }
+function wrap(ctx, txt, x, y, maxW, lh, maxLines){ const words = txt.split(' '); let line = '', n = 0;
+  for(let i = 0; i < words.length; i++){ const test = line ? line + ' ' + words[i] : words[i];
+    if(ctx.measureText(test).width > maxW && line){ if(n === maxLines-1){ while(ctx.measureText(line + '…').width > maxW) line = line.slice(0,-1); ctx.fillText(line + '…', x, y + n*lh); return; } ctx.fillText(line, x, y + n*lh); n++; line = words[i]; } else line = test; }
+  ctx.fillText(line, x, y + n*lh); }
+async function drawAvatar(ctx, name, cx, cy, r){
+  const g = ctx.createLinearGradient(cx-r, cy-r, cx+r, cy+r); g.addColorStop(0, '#7063F0'); g.addColorStop(1, '#FF7029');
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, r-6, 0, Math.PI*2); ctx.fillStyle = '#242832'; ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r-9, 0, Math.PI*2); ctx.clip();
+  if(PHOTOS[name]){ const im = await loadImg(PHOTOS[name]); ctx.drawImage(im, cx-r+9, cy-r+9, (r-9)*2, (r-9)*2); }
+  else { ctx.fillStyle = g; ctx.fillRect(cx-r, cy-r, r*2, r*2); ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.round(r*0.6)}px "IBM Plex Sans", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(initials(name), cx, cy+2); }
+  ctx.restore(); ctx.textBaseline = 'alphabetic';
+}
+async function makeArt(m){
+  await document.fonts.ready;
+  const A = awardsFor(m), [y, mo] = m.split('-'), mes = MESES_LONGOS[+mo-1];
+  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
+  const SANS = '"IBM Plex Sans", sans-serif', SERIF = '"IBM Plex Serif", Georgia, serif';
+  // fundo grafite com brilhos da marca
+  ctx.fillStyle = '#1C1F26'; ctx.fillRect(0, 0, W, H);
+  const glow = (x, y, r, col) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(28,31,38,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
+  glow(1000, 60, 520, 'rgba(112,99,240,.35)'); glow(60, 1320, 520, 'rgba(255,112,41,.22)');
+  const bar = ctx.createLinearGradient(0, 0, W, 0); bar.addColorStop(0, '#7063F0'); bar.addColorStop(1, '#FF7029'); ctx.fillStyle = bar; ctx.fillRect(0, 0, W, 10);
+  // logo
+  const logo = await loadImg(document.querySelector('.logo-dark').src); ctx.drawImage(logo, 64, 58, 183, 60);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#A3A7B5'; ctx.font = `500 26px ${SANS}`; ctx.fillText('Contas a Receber', W-64, 98);
+  // título
+  ctx.textAlign = 'left'; ctx.fillStyle = '#FF8A4C'; ctx.font = `600 26px ${SANS}`;
+  ctx.save(); ctx.letterSpacing = '5px'; ctx.fillText('RECONHECIMENTOS DO MÊS', 64, 200); ctx.restore();
+  ctx.fillStyle = '#FFFFFF'; ctx.font = `600 76px ${SERIF}`; ctx.fillText(`Destaques de ${mes}`, 64, 285);
+  ctx.fillStyle = '#A3A7B5'; ctx.font = `400 28px ${SANS}`; ctx.fillText(`${mes[0].toUpperCase() + mes.slice(1)} de ${y} · parabéns pelo trabalho!`, 64, 335);
+  // cards 2x2
+  const cards = [
+    {ico:'check', t:'Destaque em Monitoria', w:A.mon.win.map(x=>x.n), metric:A.mon.win.length ? fmtPct(A.mon.win[0].v) : '', sub:'maior média nas monitorias', none:'Sem monitorias no mês'},
+    {ico:'chart', t:'Destaque em Crescimento', w:A.cres.win.map(x=>x.n), metric:A.cres.win.length ? '+' + fmtPct(A.cres.win[0].v) : '', sub:`produtividade sobre ${MESES_LONGOS[+prevMonth(m).slice(5)-1]}`, none:'Ninguém aumentou a produtividade'},
+    {ico:'users', t:'Parceiro do Mês', w:A.par.win.map(x=>x.n), metric:A.par.win.length ? fmt2(A.par.win[0].v) : '', sub:'média na avaliação dos colegas', none:'Sem votação no mês'},
+    {ico:'trophy', t:'Atitude de Impacto', w:A.at.win.map(x=>x.n), metric:A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '', sub:'mais citado pelos colegas', none:'Sem votação no mês', quote:A.at.atitudes[0]}
+  ];
+  const CW = 460, CH = 410, GX = 28, X0 = 64, Y0 = 385;
+  for(let i = 0; i < 4; i++){
+    const k = cards[i], x = X0 + (i%2)*(CW+GX), yy = Y0 + Math.floor(i/2)*(CH+GX);
+    ctx.save(); rr(ctx, x, yy, CW, CH, 28); ctx.fillStyle = 'rgba(36,40,50,.92)'; ctx.fill(); ctx.strokeStyle = '#363B48'; ctx.lineWidth = 2; ctx.stroke(); ctx.clip();
+    ctx.fillStyle = bar; ctx.fillRect(x, yy, CW, 8); ctx.restore();
+    // cabeçalho
+    rr(ctx, x+28, yy+36, 52, 52, 14); ctx.fillStyle = 'rgba(255,138,76,.16)'; ctx.fill();
+    ctx.drawImage(await iconImg(k.ico, '#FF8A4C'), x+40, yy+48, 28, 28);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#FFFFFF'; ctx.font = `600 27px ${SANS}`; ctx.fillText(k.t, x+96, yy+60);
+    ctx.fillStyle = '#A3A7B5'; ctx.font = `400 20px ${SANS}`; ctx.fillText(k.sub, x+96, yy+86);
+    ctx.textAlign = 'center'; const cx = x + CW/2;
+    if(!k.w.length){
+      ctx.beginPath(); ctx.arc(cx, yy+205, 66, 0, Math.PI*2); ctx.fillStyle = '#2B303B'; ctx.fill(); ctx.strokeStyle = '#363B48'; ctx.stroke();
+      ctx.fillStyle = '#7D8190'; ctx.font = `600 54px ${SANS}`; ctx.fillText('–', cx, yy+222);
+      ctx.fillStyle = '#A3A7B5'; ctx.font = `italic 400 24px ${SANS}`; wrap(ctx, k.none, cx, yy+320, CW-60, 32, 2);
+      continue;
+    }
+    if(k.w.length === 1){
+      await drawAvatar(ctx, k.w[0], cx, yy+190, 76);
+      ctx.fillStyle = '#FFFFFF'; fitText(ctx, k.w[0], CW-48, 36, 600, SERIF); ctx.fillText(k.w[0], cx, yy+310);
+    } else {
+      const n = Math.min(k.w.length, 3), r = n === 2 ? 62 : 50, step = (CW-40)/n;
+      for(let j = 0; j < n; j++){ const ax = x + 20 + step*j + step/2; await drawAvatar(ctx, k.w[j], ax, yy+190, r);
+        ctx.fillStyle = '#FFFFFF'; fitText(ctx, k.w[j], step-12, 26, 600, SERIF); ctx.fillText(k.w[j], ax, yy+190+r+38); }
+      ctx.fillStyle = '#FF8A4C'; ctx.font = `600 18px ${SANS}`; ctx.fillText('EMPATE', cx, yy+116);
+    }
+    ctx.fillStyle = '#9A91F5'; ctx.font = `700 40px ${SANS}`; ctx.fillText(k.metric, cx, yy+360);
+    if(k.quote){ ctx.fillStyle = '#A3A7B5'; ctx.font = `italic 400 19px ${SANS}`; wrap(ctx, `“${k.quote}”`, cx, yy+392, CW-60, 24, 1); }
+  }
+  // rodapé
+  ctx.textAlign = 'center'; ctx.fillStyle = '#A3A7B5'; ctx.font = `400 24px ${SANS}`;
+  ctx.fillText('Obrigado a toda a equipe de Contas a Receber pelo empenho no mês.', W/2, H-52);
+  return c;
+}
+async function openArt(){
+  const m = state.rec, dlg = $('#artDlg'), box = $('#artBox');
+  box.innerHTML = '<div class="spin"></div>'; dlg.showModal();
+  try{ const c = await makeArt(m); c.style.cssText = 'width:100%;height:auto;border-radius:12px;display:block';
+    box.innerHTML = ''; box.appendChild(c);
+    $('#artSave').onclick = () => c.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `reconhecimentos-${fmtMonth(m).replace('/','-')}.png`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }, 'image/png');
+  }catch(e){ box.innerHTML = `<p class="muted">Não foi possível montar a arte: ${esc(e.message)}</p>`; }
+}
+
+$('#btnArt').onclick = openArt;
+$('#artClose').onclick = () => $('#artDlg').close();
 
 function render(){ renderGeral(); renderPausas(); renderSabados(); renderRec(); $('#ocAll').innerHTML = ocList(DB.oc.filter(o => !state.agent || o.quem === state.agent || norm(o.quem)==='equipe')); }
 
