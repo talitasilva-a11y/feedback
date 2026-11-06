@@ -860,6 +860,9 @@ function wrap(ctx, txt, x, y, maxW, lh, maxLines){ const words = txt.split(' ');
   for(let i = 0; i < words.length; i++){ const test = line ? line + ' ' + words[i] : words[i];
     if(ctx.measureText(test).width > maxW && line){ if(n === maxLines-1){ while(ctx.measureText(line + '…').width > maxW) line = line.slice(0,-1); ctx.fillText(line + '…', x, y + n*lh); return; } ctx.fillText(line, x, y + n*lh); n++; line = words[i]; } else line = test; }
   ctx.fillText(line, x, y + n*lh); }
+function wrapLines(ctx, txt, maxW){ const out = []; let line = '';
+  for(const w of txt.split(/\s+/).filter(Boolean)){ const test = line ? line + ' ' + w : w; if(ctx.measureText(test).width > maxW && line){ out.push(line); line = w; } else line = test; }
+  if(line) out.push(line); return out; }
 async function drawAvatar(ctx, name, cx, cy, r){
   const g = ctx.createLinearGradient(cx-r, cy-r, cx+r, cy+r); g.addColorStop(0, '#7063F0'); g.addColorStop(1, '#FF7029');
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fillStyle = g; ctx.fill();
@@ -872,8 +875,15 @@ async function drawAvatar(ctx, name, cx, cy, r){
 async function makeArt(m){
   await document.fonts.ready;
   const A = awardsFor(m), [y, mo] = m.split('-'), mes = MESES_LONGOS[+mo-1];
-  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
   const SANS = '"IBM Plex Sans", sans-serif', SERIF = '"IBM Plex Serif", Georgia, serif';
+  // Citações da Atitude de Impacto: faixa própria embaixo dos cards, com a altura que o texto precisar
+  const quotes = A.at.atitudes.slice(0, 4), QW = 1080 - 128 - 64;
+  const mctx = document.createElement('canvas').getContext('2d');
+  let qSize = 26, qLines = [];
+  for(; qSize >= 18; qSize -= 2){ mctx.font = `italic 400 ${qSize}px ${SANS}`; qLines = quotes.map(q => wrapLines(mctx, `“${q}”`, QW)); if(qLines.flat().length <= 9) break; }
+  const qLH = Math.round(qSize * 1.45), QY = 385 + 410*2 + 28 + 28;
+  const qH = quotes.length ? 96 + qLines.flat().length * qLH + (quotes.length - 1) * 16 + 28 : 0;
+  const W = 1080, H = quotes.length ? QY + qH + 110 : 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
   // fundo grafite com brilhos da marca
   ctx.fillStyle = '#1C1F26'; ctx.fillRect(0, 0, W, H);
   const glow = (x, y, r, col) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(28,31,38,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
@@ -892,7 +902,7 @@ async function makeArt(m){
     {ico:'check', t:'Destaque em Monitoria', w:A.mon.win.map(x=>x.n), metric:A.mon.win.length ? fmtPct(A.mon.win[0].v) : '', sub:'Maior média nas monitorias', none:'Sem monitorias no mês'},
     {ico:'chart', t:'Destaque em Crescimento', w:A.cres.win.map(x=>x.n), metric:A.cres.win.length ? '+' + fmtPct(A.cres.win[0].v) : '', sub:`Produtividade sobre ${MESES_LONGOS[+prevMonth(m).slice(5)-1]}`, none:'Ninguém aumentou a produtividade'},
     {ico:'users', t:'Parceiro do Mês', w:A.par.win.map(x=>x.n), metric:A.par.win.length ? fmt2(A.par.win[0].v) : '', sub:'Média na avaliação dos colegas', none:'Sem votação no mês'},
-    {ico:'trophy', t:'Atitude de Impacto', w:A.at.win.map(x=>x.n), metric:A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '', sub:'Mais citado pelos colegas', none:'Sem votação no mês', quote:A.at.atitudes[0]}
+    {ico:'trophy', t:'Atitude de Impacto', w:A.at.win.map(x=>x.n), metric:A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '', sub:'Mais citado pelos colegas', none:'Sem votação no mês'}
   ];
   const CW = 460, CH = 410, GX = 28, X0 = 64, Y0 = 385;
   for(let i = 0; i < 4; i++){
@@ -921,7 +931,15 @@ async function makeArt(m){
       ctx.fillStyle = '#FF8A4C'; ctx.font = `600 18px ${SANS}`; ctx.fillText('EMPATE', cx, yy+116);
     }
     ctx.fillStyle = '#9A91F5'; ctx.font = `700 40px ${SANS}`; ctx.fillText(k.metric, cx, yy+360);
-    if(k.quote){ ctx.fillStyle = '#A3A7B5'; ctx.font = `italic 400 19px ${SANS}`; wrap(ctx, `“${k.quote}”`, cx, yy+392, CW-60, 24, 1); }
+  }
+  if(quotes.length){
+    ctx.save(); rr(ctx, 64, QY, W-128, qH, 28); ctx.fillStyle = 'rgba(36,40,50,.92)'; ctx.fill(); ctx.strokeStyle = '#363B48'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+    ctx.fillStyle = '#FF7029'; ctx.fillRect(64, QY + 30, 6, qH - 60);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#FF8A4C'; ctx.font = `600 22px ${SANS}`;
+    ctx.fillText(`O que os colegas disseram sobre ${joinNames(A.at.win.map(x => x.n))}`, 100, QY + 58);
+    ctx.fillStyle = '#E4E6EE'; ctx.font = `italic 400 ${qSize}px ${SANS}`;
+    let qy = QY + 58 + 30 + qSize * 0.4;
+    for(const lines of qLines){ for(const l of lines){ ctx.fillText(l, 100, qy + qLH*0.6); qy += qLH; } qy += 16; }
   }
   // rodapé
   ctx.textAlign = 'center'; ctx.fillStyle = '#A3A7B5'; ctx.font = `400 24px ${SANS}`;
