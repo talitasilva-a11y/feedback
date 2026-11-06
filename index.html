@@ -237,7 +237,7 @@ tr:last-child td{border-bottom:none}
       <div class="grid awards" id="awards"></div>
       <div class="group-title"><h2>Histórico de vencedores</h2><small>mês a mês</small></div>
       <div class="table-wrap"><table class="hist" id="tblHist"></table></div>
-      <p class="note">Crescimento: quem esteve de férias no mês ou no mês anterior não concorre. Parceiro do Mês: notas 0 e em branco são desconsideradas. Atitude de Impacto: empate decidido pela melhor média no Parceiro do Mês.</p>
+      <p class="note">Crescimento: quem teve mais de 5 dias de férias no mês ou no mês anterior não concorre. Parceiro do Mês: notas 0 e em branco são desconsideradas. Atitude de Impacto: empate decidido pela melhor média no Parceiro do Mês.</p>
     </section>
 
     <!-- OCORRÊNCIAS -->
@@ -277,6 +277,7 @@ const CORTE_ESCALA = '2026-08-25'; // a partir desta data: satisfação de 1 a 1
 const LIM_EFETIVA = 40;            // segundos para a chamada realizada contar como atendida
 const LIM_DESCANSO = 15*60 + 30;   // 15 min + 30 s de tolerância
 const LIM_PARTICULAR = 15*60;      // marcador diário
+const MAX_DIAS_FERIAS_CRESC = 5;   // até 5 dias de férias no mês a pessoa ainda concorre ao Crescimento
 const PADRAO_INICIO = '2026-08', PADRAO_FIM = '2026-10', PADRAO_REC = '2026-10';
 
 /* ========================================================= */
@@ -424,6 +425,9 @@ const inRange = (mk, s, e) => mk >= s && mk <= e;
 const monthEnd = mk => { const [y,m] = mk.split('-').map(Number); return `${mk}-${String(new Date(y, m, 0).getDate()).padStart(2,'0')}`; };
 // períodos de férias do colaborador que tocam o mês
 function feriasNoMes(agent, mk){ const a = mk + '-01', b = monthEnd(mk); return DB.ferias.filter(f => f.agent === agent && f.ini <= b && (f.fim || '9999-12-31') >= a); }
+function diasFeriasNoMes(agent, mk){ const a = mk + '-01', b = monthEnd(mk); let n = 0;
+  for(const f of feriasNoMes(agent, mk)){ let d = f.ini > a ? f.ini : a; const fim = (f.fim || '9999-12-31') < b ? f.fim : b; while(d <= fim){ n++; d = addDays(d, 1); } }
+  return n; }
 function emFerias(agent, dk){ return DB.ferias.some(f => f.agent === agent && f.ini <= dk && (f.fim || '9999-12-31') >= dk); }
 const feriasTxt = f => f.fim ? `${fmtDay(f.ini)} a ${fmtDay(f.fim)}` : `desde ${fmtDay(f.ini)}`;
 function stats(agent, s, e){
@@ -679,7 +683,7 @@ function awardsFor(m){
   // Crescimento: quem esteve de férias no mês ou no anterior não concorre
   const excl = [];
   const gr = TEAM.map(t => { const c = stats(t.name, m, m), p = stats(t.name, prev, prev);
-    const fer = [...feriasNoMes(t.name, prev), ...feriasNoMes(t.name, m)];
+    const fer = [prev, m].filter(mm => diasFeriasNoMes(t.name, mm) > MAX_DIAS_FERIAS_CRESC).flatMap(mm => feriasNoMes(t.name, mm));
     const o = {n:t.name, cur:c.prod, prev:p.prod, ok:c.dias>0 && p.dias>0 && p.prod>0, v:p.prod ? (c.prod-p.prod)/p.prod*100 : NaN};
     if(o.ok && fer.length){ excl.push({n:t.name, txt:[...new Set(fer.map(feriasTxt))].join('; ')}); o.ok = false; }
     return o; }).filter(x => x.ok);
