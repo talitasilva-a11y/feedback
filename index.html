@@ -114,11 +114,14 @@ tr:last-child td{border-bottom:none}
 .award .ico svg{width:22px;height:22px}
 .award .kind{color:var(--ink);font-weight:600;font-size:.95rem}
 .award .crit{color:var(--muted);font-size:.75rem}
-.award .winner{display:flex;align-items:center;gap:12px;position:relative;z-index:1;margin-top:4px}
-.avatars{display:flex;flex:none}
-.avatar{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:1.05rem;color:#fff;background:linear-gradient(135deg,var(--brand-purple),var(--brand-orange));border:3px solid var(--surface)}
-.avatars .avatar+.avatar{margin-left:-14px}
-.avatar.empty{background:var(--surface-2);color:var(--muted);border-color:var(--line)}
+.award .winners{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.award .winner{display:flex;align-items:center;gap:14px}
+.avatar{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:1.2rem;color:#fff;background:linear-gradient(135deg,var(--brand-purple),var(--brand-orange));padding:3px;flex:none}
+.avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;border:2px solid var(--surface)}
+.avatar.empty{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.award .tie .avatar{width:52px;height:52px;font-size:1rem}
+.award .tie .who{font-size:1.15rem}
+.tie-tag{align-self:flex-start;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);background:var(--primary-soft);border-radius:10px;padding:2px 9px}
 .award .who{font-family:"IBM Plex Serif",Georgia,serif;font-size:1.3rem;line-height:1.2}
 .award .metric{font-size:1.6rem;font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;position:relative;z-index:1}
 .award .why{color:var(--muted);font-size:.85rem;position:relative;z-index:1}
@@ -701,6 +704,8 @@ function awardsFor(m){
   const at = {win: atWin, desempate, atitudes: resp.filter(r => atWin.some(w => w.n === r.citado) && r.atitude).map(r => r.atitude)};
   return {mon, cres, par, at, temVotacao: resp.length > 0};
 }
+// Fotos dos colaboradores (recortadas e embutidas). Quem não tiver foto aparece com as iniciais.
+const PHOTOS = {};
 const ICONS = {
   mon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>',
   cres:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
@@ -710,10 +715,12 @@ const ICONS = {
 function renderRec(){
   const m = state.rec, A = awardsFor(m), prev = A.cres.prev;
   $('#recTitle').textContent = `Destaques de ${fmtMonth(m)}`;
+  const avatar = n => `<div class="avatar">${PHOTOS[n] ? `<img src="${PHOTOS[n]}" alt="Foto de ${esc(n)}">` : `<span aria-hidden="true">${esc(initials(n))}</span>`}</div>`;
   const card = (ico, kind, crit, winners, metric, why, extra='') => `<div class="award">
     <div class="head"><div class="ico">${ICONS[ico]}</div><div><div class="kind">${kind}</div><div class="crit">${crit}</div></div></div>
-    <div class="winner"><div class="avatars">${winners.length ? winners.map(n => `<div class="avatar" aria-hidden="true">${esc(initials(n))}</div>`).join('') : '<div class="avatar empty" aria-hidden="true">–</div>'}</div>
-      <div class="who">${winners.length ? esc(joinNames(winners)) : '<span class="muted" style="font-size:1rem">Sem vencedor</span>'}</div></div>
+    <div class="winners${winners.length > 1 ? ' tie' : ''}">${winners.length > 1 ? `<span class="tie-tag">Empate · ${winners.length} vencedores</span>` : ''}
+      ${winners.length ? winners.map(n => `<div class="winner">${avatar(n)}<div class="who">${esc(n)}</div></div>`).join('')
+        : '<div class="winner"><div class="avatar empty" aria-hidden="true">–</div><div class="who"><span class="muted" style="font-size:1rem">Sem vencedor</span></div></div>'}</div>
     ${metric ? `<div class="metric">${metric}</div>` : ''}<div class="why${winners.length?'':' none'}">${why}</div>${extra}</div>`;
   const exclBox = A.cres.excl.length ? `<div class="excl">Não concorrem por férias: ${A.cres.excl.map(x => `${esc(x.n)} (${esc(x.txt)})`).join('; ')}.</div>` : '';
   const g = A.cres.win[0];
@@ -726,7 +733,7 @@ function renderRec(){
       A.mon.win.length ? `Média das monitorias de ${fmtMonth(m)}.` : 'Sem monitorias registradas neste mês.'),
     card('cres', 'Destaque em Crescimento', `maior aumento de produtividade sobre ${fmtMonth(prev)}`, A.cres.win.map(x=>x.n), g ? '+' + fmtPct(g.v) : '', cresWhy, exclBox),
     card('par', 'Parceiro do Mês', 'maior média na avaliação dos colegas', A.par.win.map(x=>x.n), A.par.win.length ? fmt2(A.par.win[0].v) : '',
-      A.par.win.length ? `Média nas avaliações dos colegas${A.par.win.length>1?'. Empate: todos são reconhecidos':''}.` : 'Não houve votação referente a este mês.'),
+      A.par.win.length ? `Média nas avaliações dos colegas${A.par.win.length>1?'. Todos são reconhecidos':''}.` : 'Não houve votação referente a este mês.'),
     card('at', 'Atitude de Impacto', 'mais citado pelos colegas', A.at.win.map(x=>x.n), A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '',
       A.at.win.length ? `Citado como colega de maior impacto positivo${A.at.desempate?', com desempate pela média no Parceiro do Mês':''}.` : 'Não houve votação referente a este mês.',
       A.at.atitudes.slice(0,3).map(t => `<blockquote>“${esc(t)}”</blockquote>`).join(''))
