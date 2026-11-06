@@ -876,14 +876,23 @@ async function makeArt(m){
   await document.fonts.ready;
   const A = awardsFor(m), [y, mo] = m.split('-'), mes = MESES_LONGOS[+mo-1];
   const SANS = '"IBM Plex Sans", sans-serif', SERIF = '"IBM Plex Serif", Georgia, serif';
+  // só os prêmios que tiveram vencedor no mês
+  const cards = [
+    {ico:'check', t:'Destaque em Monitoria', w:A.mon.win.map(x=>x.n), metric:A.mon.win.length ? fmtPct(A.mon.win[0].v) : '', sub:'Maior média nas monitorias', none:'Sem monitorias no mês'},
+    {ico:'chart', t:'Destaque em Crescimento', w:A.cres.win.map(x=>x.n), metric:A.cres.win.length ? '+' + fmtPct(A.cres.win[0].v) : '', sub:`Produtividade sobre ${MESES_LONGOS[+prevMonth(m).slice(5)-1]}`, none:'Ninguém aumentou a produtividade'},
+    {ico:'users', t:'Parceiro do Mês', w:A.par.win.map(x=>x.n), metric:A.par.win.length ? fmt2(A.par.win[0].v) : '', sub:'Média na avaliação dos colegas', none:'Sem votação no mês'},
+    {ico:'trophy', t:'Atitude de Impacto', w:A.at.win.map(x=>x.n), metric:A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '', sub:'Mais citado pelos colegas', none:'Sem votação no mês'}
+  ];
+  const shown = cards.filter(k => k.w.length), rows = Math.ceil(shown.length / 2);
+  const CW = 460, CH = 410, GX = 28, X0 = 64, Y0 = 385, cardsEnd = rows ? Y0 + rows*CH + (rows-1)*GX : Y0 + 120;
   // Citações da Atitude de Impacto: faixa própria embaixo dos cards, com a altura que o texto precisar
   const quotes = A.at.atitudes.slice(0, 4), QW = 1080 - 128 - 64;
   const mctx = document.createElement('canvas').getContext('2d');
   let qSize = 26, qLines = [];
   for(; qSize >= 18; qSize -= 2){ mctx.font = `italic 400 ${qSize}px ${SANS}`; qLines = quotes.map(q => wrapLines(mctx, `“${q}”`, QW)); if(qLines.flat().length <= 9) break; }
-  const qLH = Math.round(qSize * 1.45), QY = 385 + 410*2 + 28 + 28;
+  const qLH = Math.round(qSize * 1.45), QY = cardsEnd + 28;
   const qH = quotes.length ? 96 + qLines.flat().length * qLH + (quotes.length - 1) * 16 + 28 : 0;
-  const W = 1080, H = quotes.length ? QY + qH + 110 : 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
+  const W = 1080, H = quotes.length ? QY + qH + 110 : Math.max(cardsEnd + 117, 900), c = document.createElement('canvas'); c.width = W; c.height = H; const ctx = c.getContext('2d');
   // fundo grafite com brilhos da marca
   ctx.fillStyle = '#1C1F26'; ctx.fillRect(0, 0, W, H);
   const glow = (x, y, r, col) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(28,31,38,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
@@ -897,16 +906,10 @@ async function makeArt(m){
   ctx.save(); ctx.letterSpacing = '5px'; ctx.fillText('RECONHECIMENTOS DO MÊS', 64, 200); ctx.restore();
   ctx.fillStyle = '#FFFFFF'; ctx.font = `600 76px ${SERIF}`; ctx.fillText(`Destaques de ${mes}`, 64, 285);
   ctx.fillStyle = '#A3A7B5'; ctx.font = `400 28px ${SANS}`; ctx.fillText(`${mes} de ${y} · Parabéns pelo trabalho!`, 64, 335);
-  // cards 2x2
-  const cards = [
-    {ico:'check', t:'Destaque em Monitoria', w:A.mon.win.map(x=>x.n), metric:A.mon.win.length ? fmtPct(A.mon.win[0].v) : '', sub:'Maior média nas monitorias', none:'Sem monitorias no mês'},
-    {ico:'chart', t:'Destaque em Crescimento', w:A.cres.win.map(x=>x.n), metric:A.cres.win.length ? '+' + fmtPct(A.cres.win[0].v) : '', sub:`Produtividade sobre ${MESES_LONGOS[+prevMonth(m).slice(5)-1]}`, none:'Ninguém aumentou a produtividade'},
-    {ico:'users', t:'Parceiro do Mês', w:A.par.win.map(x=>x.n), metric:A.par.win.length ? fmt2(A.par.win[0].v) : '', sub:'Média na avaliação dos colegas', none:'Sem votação no mês'},
-    {ico:'trophy', t:'Atitude de Impacto', w:A.at.win.map(x=>x.n), metric:A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '', sub:'Mais citado pelos colegas', none:'Sem votação no mês'}
-  ];
-  const CW = 460, CH = 410, GX = 28, X0 = 64, Y0 = 385;
-  for(let i = 0; i < 4; i++){
-    const k = cards[i], x = X0 + (i%2)*(CW+GX), yy = Y0 + Math.floor(i/2)*(CH+GX);
+  if(!shown.length){ ctx.textAlign = 'center'; ctx.fillStyle = '#A3A7B5'; ctx.font = `italic 400 30px ${SANS}`; ctx.fillText('Sem reconhecimentos registrados neste mês.', W/2, Y0 + 70); }
+  for(let i = 0; i < shown.length; i++){
+    const k = shown[i], sozinho = i === shown.length - 1 && shown.length % 2 === 1;
+    const x = sozinho ? (W - CW)/2 : X0 + (i%2)*(CW+GX), yy = Y0 + Math.floor(i/2)*(CH+GX);
     ctx.save(); rr(ctx, x, yy, CW, CH, 28); ctx.fillStyle = 'rgba(36,40,50,.92)'; ctx.fill(); ctx.strokeStyle = '#363B48'; ctx.lineWidth = 2; ctx.stroke(); ctx.clip();
     ctx.fillStyle = bar; ctx.fillRect(x, yy, CW, 8); ctx.restore();
     // cabeçalho
