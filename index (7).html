@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contas a Receber · Painel de Indicadores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* =========================================================
+   CONFIGURAÇÃO DE CORES
+   ========================================================= */
+:root{
+  --bg:#eef2f1; --surface:#ffffff; --surface-2:#f6f8f7; --ink:#18262e; --muted:#5a6a72;
+  --line:#d5dedb; --primary:#14596f; --primary-soft:#dcebef;
+  --gold:#a8730c; --gold-soft:#f7ecd4; --good:#2b7a4b; --good-soft:#dff0e5;
+  --bad:#b23a26; --bad-soft:#f7e0db; --warn:#8a6a00; --warn-soft:#f6efcf;
+  --c1:#14596f; --c2:#c07a12; --c3:#6c4ea0; --c4:#2b7a4b; --c5:#9aa4a8;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101a1f; --surface:#17242b; --surface-2:#1c2c34; --ink:#e4ecee; --muted:#9aaab0;
+    --line:#2b3d45; --primary:#6fb8cf; --primary-soft:#1d3a45;
+    --gold:#e2ad45; --gold-soft:#3a2f17; --good:#6cc28e; --good-soft:#1c3427;
+    --bad:#ec8a77; --bad-soft:#3d221d; --warn:#e0c25a; --warn-soft:#352f17;
+    --c1:#6fb8cf; --c2:#e2ad45; --c3:#b39ae0; --c4:#6cc28e; --c5:#7d8a8f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101a1f; --surface:#17242b; --surface-2:#1c2c34; --ink:#e4ecee; --muted:#9aaab0;
+  --line:#2b3d45; --primary:#6fb8cf; --primary-soft:#1d3a45;
+  --gold:#e2ad45; --gold-soft:#3a2f17; --good:#6cc28e; --good-soft:#1c3427;
+  --bad:#ec8a77; --bad-soft:#3d221d; --warn:#e0c25a; --warn-soft:#352f17;
+  --c1:#6fb8cf; --c2:#e2ad45; --c3:#b39ae0; --c4:#6cc28e; --c5:#7d8a8f;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3{margin:0;line-height:1.2}
+h1{font-family:"IBM Plex Serif",Georgia,serif;font-weight:600;font-size:1.65rem}
+h2{font-size:1.15rem;font-weight:600}
+h3{font-size:.95rem;font-weight:600}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.top .wrap{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding-top:14px;padding-bottom:14px}
+.top .sub{color:var(--muted);font-size:.85rem}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.filters label{display:flex;flex-direction:column;font-size:.75rem;color:var(--muted);gap:3px}
+select,button{font:inherit;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+button{cursor:pointer}
+select:focus-visible,button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;margin:18px 0 0;border-bottom:1px solid var(--line)}
+nav.tabs button{background:none;border:none;border-bottom:3px solid transparent;border-radius:0;padding:10px 14px;color:var(--muted);white-space:nowrap;font-weight:500}
+nav.tabs button[aria-selected="true"]{color:var(--primary);border-bottom-color:var(--primary)}
+main{padding:22px 0 60px}
+section.view{display:none}
+section.view.active{display:block}
+.context{background:var(--primary-soft);border-left:4px solid var(--primary);padding:10px 14px;border-radius:4px;margin-bottom:18px;font-size:.9rem}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kpi .lbl{color:var(--muted);font-size:.8rem}
+.kpi .val{font-size:1.6rem;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .cmp{font-size:.78rem;color:var(--muted);margin-top:2px}
+.kpi .cmp b.up{color:var(--good)} .kpi .cmp b.down{color:var(--bad)}
+.group-title{margin:26px 0 10px;display:flex;align-items:baseline;gap:10px}
+.group-title small{color:var(--muted);font-weight:400}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}
+.two{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.chart-box{position:relative;height:280px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.86rem;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{background:var(--surface-2);font-weight:600;color:var(--muted);font-size:.78rem}
+tr.avg td{font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:none}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:.75rem;font-weight:600}
+.tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.warn{background:var(--warn-soft);color:var(--warn)}
+.tag.good{background:var(--good-soft);color:var(--good)} .tag.off{background:var(--surface-2);color:var(--muted)}
+.muted{color:var(--muted)}
+.note{font-size:.82rem;color:var(--muted);margin-top:8px}
+/* Reconhecimentos: o elemento de destaque do painel */
+.awards{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.award{background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--gold);border-radius:8px;padding:18px}
+.award .kind{color:var(--gold);font-weight:600;font-size:.85rem}
+.award .who{font-family:"IBM Plex Serif",Georgia,serif;font-size:1.45rem;margin:6px 0 4px}
+.award .why{color:var(--muted);font-size:.85rem}
+.award ul{margin:10px 0 0;padding-left:18px;font-size:.86rem}
+.award ul li{margin-bottom:4px}
+.award .none{color:var(--muted);font-style:italic}
+.list{margin:0;padding:0;list-style:none}
+.list li{padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+.list li:last-child{border-bottom:none}
+#loading{padding:60px 0;text-align:center;color:var(--muted)}
+#loading ul{list-style:none;padding:0;margin:14px auto 0;max-width:360px;text-align:left;font-size:.88rem}
+#error{display:none;background:var(--bad-soft);color:var(--bad);border-radius:8px;padding:14px 16px;margin:20px 0}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div>
+      <h1>Contas a Receber</h1>
+      <div class="sub" id="updated">Carregando dados da planilha…</div>
+    </div>
+    <div class="filters">
+      <label>De <select id="fStart"></select></label>
+      <label>Até <select id="fEnd"></select></label>
+      <label>Colaborador <select id="fAgent"></select></label>
+      <button id="btnTheme" type="button" aria-label="Alternar tema claro e escuro">Tema</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-view="geral" aria-selected="true">Visão geral</button>
+    <button role="tab" data-view="pausas" aria-selected="false">Pausas</button>
+    <button role="tab" data-view="sabados" aria-selected="false">Sábados</button>
+    <button role="tab" data-view="reconhecimentos" aria-selected="false">Reconhecimentos</button>
+    <button role="tab" data-view="ocorrencias" aria-selected="false">Ocorrências</button>
+  </nav>
+
+  <div id="error"></div>
+  <div id="loading">Lendo as abas da planilha. A aba de chamadas é grande e pode levar alguns segundos.<ul id="loadList"></ul></div>
+
+  <main id="app" hidden>
+    <!-- VISÃO GERAL -->
+    <section class="view active" id="v-geral">
+      <div class="context" id="ctxGeral"></div>
+      <div class="group-title"><h2>Produtividade</h2><small>chamadas efetivas (acima de 40s) + recebidas atendidas + chats</small></div>
+      <div class="grid kpis" id="kpiProd"></div>
+      <div class="group-title"><h2>Qualidade</h2><small>monitoria, satisfação, NPS e resolução</small></div>
+      <div class="grid kpis" id="kpiQual"></div>
+      <div class="group-title"><h2>Evolução mês a mês</h2></div>
+      <div class="grid two">
+        <div class="panel"><h3>Produtividade</h3><div class="chart-box"><canvas id="chProd"></canvas></div></div>
+        <div class="panel"><h3>Nota média de monitoria</h3><div class="chart-box"><canvas id="chMon"></canvas></div></div>
+      </div>
+      <div class="group-title"><h2>Por colaborador</h2><small>no período selecionado</small></div>
+      <div class="table-wrap"><table id="tblAgents"></table></div>
+      <p class="note">Linha "Média da equipe": média entre os colaboradores ativos no período. Satisfação convertida para a escala de 1 a 10 (notas até 24/08/2026 multiplicadas por 2). NPS e resolução contam a partir de 25/08/2026.</p>
+      <div class="group-title"><h2>Ocorrências do período</h2></div>
+      <div class="panel"><ul class="list" id="ocGeral"></ul></div>
+    </section>
+
+    <!-- PAUSAS -->
+    <section class="view" id="v-pausas">
+      <div class="context">Descanso: 15 minutos com 30 segundos de tolerância (acima de 15min30s é infração). Dias úteis com só uma pausa descanso são apontados. Particular acima de 15 minutos no dia é apenas um marcador, não infração.</div>
+      <div class="table-wrap"><table id="tblPausaResumo"></table></div>
+      <div class="grid two" style="margin-top:14px">
+        <div class="panel"><h3>Infrações de descanso</h3><div class="table-wrap" style="margin-top:8px;max-height:420px;overflow:auto"><table id="tblInfr"></table></div></div>
+        <div class="panel"><h3>Dias com uma só pausa descanso</h3><div class="table-wrap" style="margin-top:8px;max-height:420px;overflow:auto"><table id="tblUmDesc"></table></div></div>
+      </div>
+      <div class="panel" style="margin-top:14px"><h3>Marcador: particular acima de 15 min no dia</h3><div class="table-wrap" style="margin-top:8px;max-height:420px;overflow:auto"><table id="tblPart"></table></div></div>
+    </section>
+
+    <!-- SÁBADOS -->
+    <section class="view" id="v-sabados">
+      <div class="context">Sábado sem nenhum registro do colaborador (nem ligação, nem chat, nem pausa) é folga e não entra como improdutividade.</div>
+      <div class="table-wrap"><table id="tblSabResumo"></table></div>
+      <div class="group-title"><h2>Sábado a sábado</h2></div>
+      <div class="table-wrap"><table id="tblSab"></table></div>
+    </section>
+
+    <!-- RECONHECIMENTOS -->
+    <section class="view" id="v-reconhecimentos">
+      <div class="filters" style="margin-bottom:16px"><label>Mês do reconhecimento <select id="fRecMonth"></select></label></div>
+      <div class="grid awards" id="awards"></div>
+      <div class="grid two" style="margin-top:18px">
+        <div class="panel"><h3>Destaque em Monitoria mês a mês</h3><div class="table-wrap" style="margin-top:8px"><table id="tblMonWin"></table></div></div>
+        <div class="panel"><h3>Crescimento de produtividade no mês</h3><div class="table-wrap" style="margin-top:8px"><table id="tblGrowth"></table></div></div>
+      </div>
+      <div class="grid two" style="margin-top:14px">
+        <div class="panel"><h3>Parceiro do Mês: médias</h3><div class="table-wrap" style="margin-top:8px"><table id="tblParc"></table></div><p class="note">Notas 0 e em branco são desconsideradas.</p></div>
+        <div class="panel"><h3>Atitude de Impacto: citações</h3><div class="table-wrap" style="margin-top:8px"><table id="tblAtit"></table></div><p class="note">Empate é decidido pela melhor média no Parceiro do Mês.</p></div>
+      </div>
+    </section>
+
+    <!-- OCORRÊNCIAS -->
+    <section class="view" id="v-ocorrencias">
+      <div class="context">Justificativas de aumento ou redução de produção: ausências, férias, redução de quadro, desligamentos e quedas individuais.</div>
+      <div class="panel"><ul class="list" id="ocAll"></ul></div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   CONFIGURAÇÃO — ajuste aqui se mudar a planilha
+   ========================================================= */
+const PUB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQuQgFBxpnRFYUjhm5hWaka0a0F5HWBWRmUAEMODt1I29zU5ns-NnhershMHdOhQoWTl82EUWDgHs9P/pub?single=true&output=csv&gid=';
+const SOURCES = {
+  realizadas: PUB + '0',
+  recebidas:  PUB + '220056152',
+  chat:       PUB + '1335698783',
+  satisfacao: PUB + '994311887',
+  monitoria:  PUB + '1307253287',
+  pausa:      PUB + '1855059554',
+  parceiro:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW8iuoSszRcvvAzXe_gC6tmpHSx8oAVuR0BBFtJY8n0EJaeHCS_KLjolFu-n3TvoT02iMsg5GinlYu/pub?output=csv',
+  ocorrencias: '' // cole aqui o link CSV da aba de ocorrências quando ela existir
+};
+// Equipe avaliada (a chave é o primeiro nome, em minúsculas e sem acento)
+const TEAM = [
+  {key:'erick',     name:'Erick Paiva'},
+  {key:'evilene',   name:'Evilene Fernandes'},
+  {key:'luiz',      name:'Luiz Fernando'},
+  {key:'maria',     name:'Maria Vitória'},
+  {key:'nichollas', name:'Nichollas Andrade', saiu:true}
+];
+// Pessoas que só entram nos reconhecimentos do formulário
+const FORM_ONLY = [{key:'leidimeira', name:'Leidimeira Silvano'}];
+const CORTE_ESCALA = '2026-08-25'; // a partir desta data: satisfação de 1 a 10, NPS e resolução
+const LIM_EFETIVA = 40;            // segundos para a chamada realizada contar como atendida
+const LIM_DESCANSO = 15*60 + 30;   // 15 min + 30 s de tolerância
+const LIM_PARTICULAR = 15*60;      // marcador diário
+const PADRAO_INICIO = '2026-08', PADRAO_FIM = '2026-10', PADRAO_REC = '2026-10';
+
+/* ========================================================= */
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const COLORS = ['--c1','--c2','--c3','--c4','--c5'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const cssVar = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const ALL_PEOPLE = [...TEAM, ...FORM_ONLY];
+function canon(raw, list = TEAM){
+  const first = norm(raw).split(/\s+/)[0];
+  const p = list.find(t => t.key === first);
+  return p ? p.name : null;
+}
+function parseDate(s){
+  const m = String(s||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(!m) return null;
+  const d = +m[1], mo = +m[2], y = +m[3];
+  const dk = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  return {dk, mk: dk.slice(0,7), dow: new Date(y, mo-1, d).getDay()};
+}
+function dur(s){
+  const p = String(s||'').trim().split(':').map(Number);
+  if(p.some(isNaN) || !p.length) return 0;
+  return p.length === 3 ? p[0]*3600+p[1]*60+p[2] : p.length === 2 ? p[0]*60+p[1] : p[0];
+}
+function num(s){
+  if(s === undefined || s === null) return NaN;
+  const t = String(s).replace('%','').trim();
+  if(t === '') return NaN;
+  return parseFloat(t.includes(',') ? t.replace(/\./g,'').replace(',','.') : t);
+}
+const fmtInt = n => isFinite(n) ? Math.round(n).toLocaleString('pt-BR') : '–';
+const fmt1 = n => isFinite(n) ? n.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) : '–';
+const fmtPct = n => isFinite(n) ? n.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%' : '–';
+const fmtDur = s => { if(!isFinite(s)) return '–'; s = Math.round(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60; return (h? h+'h':'') + String(m).padStart(h?2:1,'0') + 'min' + String(x).padStart(2,'0') + 's'; };
+const fmtDay = dk => dk.split('-').reverse().join('/');
+const fmtMonth = mk => { const [y,m] = mk.split('-'); return MESES[+m-1] + '/' + y; };
+const prevMonth = mk => { let [y,m] = mk.split('-').map(Number); m--; if(!m){m=12;y--;} return `${y}-${String(m).padStart(2,'0')}`; };
+const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : NaN;
+function col(headers, ...keys){
+  const h = headers.map(norm);
+  for(const k of keys){ const i = h.findIndex(x => x.startsWith(norm(k))); if(i >= 0) return i; }
+  for(const k of keys){ const i = h.findIndex(x => x.includes(norm(k))); if(i >= 0) return i; }
+  return -1;
+}
+
+/* ---------- Carregamento ---------- */
+function load(name, url){
+  const li = document.createElement('li'); li.textContent = '⏳ ' + name; $('#loadList').appendChild(li);
+  return new Promise((res, rej) => {
+    Papa.parse(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), {
+      download:true, skipEmptyLines:true,
+      complete: r => { li.textContent = '✅ ' + name + ' (' + (r.data.length-1).toLocaleString('pt-BR') + ' linhas)'; res(r.data); },
+      error: e => { li.textContent = '❌ ' + name; rej(new Error(name + ': ' + (e.message || 'falha ao ler o CSV'))); }
+    });
+  });
+}
+
+const DB = { days:new Map(), recNA:new Map(), mon:[], sat:[], pausas:[], form:[], oc:[], months:new Set() };
+function day(agent, dt){
+  if(!DB.days.has(agent)) DB.days.set(agent, new Map());
+  const m = DB.days.get(agent);
+  if(!m.has(dt.dk)) m.set(dt.dk, {dk:dt.dk, mk:dt.mk, dow:dt.dow, real:0, ef:0, efSec:0, recAt:0, recSec:0, chA:0, chR:0, chSec:0, chEsp:0, chEspN:0, pausa:false});
+  DB.months.add(dt.mk);
+  return m.get(dt.dk);
+}
+
+function ingest(raw){
+  // Chamadas realizadas
+  { const [h,...rows] = raw.realizadas;
+    const iA = col(h,'nome do agente','agente'), iD = col(h,'data inicio','data'), iS = col(h,'status'), iT = col(h,'tempo em lig','tempo');
+    for(const r of rows){ const a = canon(r[iA]); const dt = parseDate(r[iD]); if(!a || !dt) continue;
+      const d = day(a, dt); d.real++; const s = dur(r[iT]);
+      if(norm(r[iS]) === 'atendida' && s > LIM_EFETIVA){ d.ef++; d.efSec += s; } } }
+  // Chamadas recebidas
+  { const [h,...rows] = raw.recebidas;
+    const iA = col(h,'nome do agente','agente'), iD = col(h,'data inicio','data'), iS = col(h,'status'), iT = col(h,'tempo em lig');
+    for(const r of rows){ const dt = parseDate(r[iD]); if(!dt) continue; const a = canon(r[iA]);
+      if(a && norm(r[iS]) === 'atendida'){ const d = day(a, dt); d.recAt++; d.recSec += dur(r[iT]); }
+      else if(!r[iA] || norm(r[iS]) !== 'atendida'){ DB.recNA.set(dt.mk, (DB.recNA.get(dt.mk)||0)+1); } } }
+  // Chat
+  { const [h,...rows] = raw.chat;
+    const iA = col(h,'atendente'), iD = col(h,'data'), iO = col(h,'origem'), iE = col(h,'tempo de espera'), iT = col(h,'tempo de atend');
+    for(const r of rows){ const a = canon(r[iA]); const dt = parseDate(r[iD]); if(!a || !dt) continue;
+      const d = day(a, dt); const o = norm(r[iO]);
+      if(o.startsWith('ativ')) d.chA++; else { d.chR++; d.chEsp += dur(r[iE]); d.chEspN++; }
+      d.chSec += dur(r[iT]); } }
+  // Satisfação
+  { const [h,...rows] = raw.satisfacao;
+    const iD = col(h,'data'), iA = col(h,'atendente'), iC = col(h,'canal'), iS = col(h,'satisf'), iN = col(h,'nps'), iR = col(h,'resolu');
+    for(const r of rows){ const a = canon(r[iA]); const dt = parseDate(r[iD]); if(!a || !dt) continue;
+      const nova = dt.dk >= CORTE_ESCALA; let n = num(r[iS]);
+      const o = {agent:a, dk:dt.dk, mk:dt.mk, canal:r[iC], pct:NaN, nps:NaN, res:null};
+      if(isFinite(n)) o.pct = (nova ? n : n*2) * 10;
+      if(nova){ const p = num(r[iN]); if(isFinite(p)) o.nps = p;
+        const rv = norm(r[iR]); if(rv) o.res = rv.startsWith('sim'); }
+      DB.sat.push(o); DB.months.add(dt.mk); } }
+  // Monitoria
+  { const [h,...rows] = raw.monitoria;
+    const iD = col(h,'data'), iA = col(h,'agente'), iN = col(h,'nota'), iC = col(h,'canal');
+    for(const r of rows){ const a = canon(r[iA]); const dt = parseDate(r[iD]); const n = num(r[iN]); if(!a || !dt || !isFinite(n)) continue;
+      DB.mon.push({agent:a, dk:dt.dk, mk:dt.mk, nota:n, canal:norm(r[iC])}); DB.months.add(dt.mk); } }
+  // Pausas
+  { const [h,...rows] = raw.pausa;
+    const iA = col(h,'nome do agente','agente'), iD = col(h,'data de entrada','data'), iT = col(h,'duracao'), iP = col(h,'nome da pausa','pausa');
+    for(const r of rows){ const a = canon(r[iA]); const dt = parseDate(r[iD]); if(!a || !dt) continue;
+      day(a, dt).pausa = true;
+      DB.pausas.push({agent:a, dk:dt.dk, mk:dt.mk, dow:dt.dow, tipo:norm(r[iP]), sec:dur(r[iT]), hora:String(r[iD]).split(' ')[1]||''}); } }
+  // Formulário Parceiro do Mês
+  { const [h,...rows] = raw.parceiro;
+    const iTs = 0, iCit = col(h,'dentre seus colegas'), iAt = col(h,'de acordo com a resposta');
+    const notaCols = h.map((x,i)=>({i, name:canon(x, ALL_PEOPLE)})).filter(c => c.name && c.i !== iCit && c.i !== iAt);
+    for(const r of rows){ const dt = parseDate(r[iTs]); if(!dt) continue;
+      const ref = dt.mk === '2026-05' ? dt.mk : prevMonth(dt.mk);
+      const notas = {}; for(const c of notaCols){ const v = num(r[c.i]); if(isFinite(v) && v > 0) notas[c.name] = v; }
+      DB.form.push({ref, notas, citado:canon(r[iCit], ALL_PEOPLE), atitude:String(r[iAt]||'').trim()}); } }
+  // Ocorrências (opcional)
+  if(raw.ocorrencias){ const [h,...rows] = raw.ocorrencias;
+    const iI = col(h,'data de inicio','data inicio','inicio','data'), iF = col(h,'data de fim','data fim','fim'), iC = col(h,'colaborador'), iT = col(h,'tipo'), iM = col(h,'impacto'), iJ = col(h,'justificativa');
+    for(const r of rows){ const di = parseDate(r[iI]); if(!di) continue; const df = parseDate(r[iF]) || di;
+      DB.oc.push({ini:di.dk, fim:df.dk, quem: canon(r[iC]) || (r[iC]||'Equipe'), tipo:r[iT]||'', impacto:r[iM]||'', just:r[iJ]||''}); }
+    DB.oc.sort((a,b)=> a.ini < b.ini ? 1 : -1); }
+}
+
+/* ---------- Cálculos ---------- */
+const inRange = (mk, s, e) => mk >= s && mk <= e;
+function stats(agent, s, e){
+  const days = [...(DB.days.get(agent)?.values() || [])].filter(d => inRange(d.mk, s, e));
+  const o = {agent, dias:days.length, real:0, ef:0, efSec:0, recAt:0, chA:0, chR:0, chSec:0, chEsp:0, chEspN:0};
+  for(const d of days){ for(const k of ['real','ef','efSec','recAt','chA','chR','chSec','chEsp','chEspN']) o[k] += d[k]; }
+  o.prod = o.ef + o.recAt + o.chA + o.chR;
+  o.prodDia = o.dias ? o.prod / o.dias : NaN;
+  o.tma = o.ef ? o.efSec / o.ef : NaN;
+  o.taxa = o.real ? o.ef / o.real * 100 : NaN;
+  o.chTma = (o.chA+o.chR) ? o.chSec / (o.chA+o.chR) : NaN;
+  o.chTme = o.chEspN ? o.chEsp / o.chEspN : NaN;
+  const mon = DB.mon.filter(m => m.agent === agent && inRange(m.mk, s, e));
+  o.mon = avg(mon.map(m=>m.nota)); o.monN = mon.length;
+  o.monChat = avg(mon.filter(m=>m.canal.startsWith('chat')).map(m=>m.nota));
+  o.monTel = avg(mon.filter(m=>!m.canal.startsWith('chat')).map(m=>m.nota));
+  const sat = DB.sat.filter(x => x.agent === agent && inRange(x.mk, s, e));
+  Object.assign(o, satStats(sat));
+  const p = pauseStats(agent, s, e); Object.assign(o, {infr:p.infr.length, umDesc:p.umDesc.length, partMarc:p.part.length});
+  return o;
+}
+function satStats(sat){
+  const pcts = sat.map(x=>x.pct).filter(isFinite);
+  const nps = sat.map(x=>x.nps).filter(isFinite);
+  const res = sat.filter(x=>x.res !== null);
+  return {
+    sat: avg(pcts), satN: pcts.length,
+    nps: nps.length ? (nps.filter(v=>v>=9).length - nps.filter(v=>v<=6).length) / nps.length * 100 : NaN, npsN: nps.length,
+    res: res.length ? res.filter(x=>x.res).length / res.length * 100 : NaN, resN: res.length
+  };
+}
+function pauseStats(agent, s, e){
+  const ps = DB.pausas.filter(p => (!agent || p.agent === agent) && inRange(p.mk, s, e));
+  const infr = ps.filter(p => p.tipo.startsWith('descanso') && p.sec > LIM_DESCANSO);
+  const byDay = new Map();
+  for(const p of ps){ const k = p.agent + '|' + p.dk; if(!byDay.has(k)) byDay.set(k, {agent:p.agent, dk:p.dk, dow:p.dow, desc:0, part:0, ref:0});
+    const b = byDay.get(k); if(p.tipo.startsWith('descanso')) b.desc++; else if(p.tipo.startsWith('particular')) b.part += p.sec; else if(p.tipo.startsWith('refei')) b.ref += p.sec; }
+  const days = [...byDay.values()];
+  return { infr, days, umDesc: days.filter(d => d.dow !== 6 && d.dow !== 0 && d.desc === 1), part: days.filter(d => d.part > LIM_PARTICULAR) };
+}
+function activeAgents(s, e){ return TEAM.map(t=>t.name).filter(a => [...(DB.days.get(a)?.values()||[])].some(d => inRange(d.mk, s, e))); }
+function monthList(s, e){ return [...DB.months].filter(m => inRange(m, s, e)).sort(); }
+
+/* ---------- Estado e filtros ---------- */
+const state = { s:PADRAO_INICIO, e:PADRAO_FIM, agent:'', rec:PADRAO_REC, view:'geral' };
+const charts = {};
+function setupFilters(){
+  const months = [...DB.months].sort();
+  const opts = months.map(m => `<option value="${m}">${fmtMonth(m)}</option>`).join('');
+  $('#fStart').innerHTML = opts; $('#fEnd').innerHTML = opts; $('#fRecMonth').innerHTML = opts;
+  if(!months.includes(state.s)) state.s = months[Math.max(0, months.length-3)];
+  if(!months.includes(state.e)) state.e = months[months.length-1];
+  if(!months.includes(state.rec)) state.rec = months[months.length-1];
+  $('#fStart').value = state.s; $('#fEnd').value = state.e; $('#fRecMonth').value = state.rec;
+  $('#fAgent').innerHTML = '<option value="">Equipe</option>' + TEAM.map(t => `<option value="${esc(t.name)}">${esc(t.name)}${t.saiu?' (saiu do setor)':''}</option>`).join('');
+  $('#fStart').onchange = e => { state.s = e.target.value; if(state.s > state.e){ state.e = state.s; $('#fEnd').value = state.e; } render(); };
+  $('#fEnd').onchange = e => { state.e = e.target.value; if(state.e < state.s){ state.s = state.e; $('#fStart').value = state.s; } render(); };
+  $('#fAgent').onchange = e => { state.agent = e.target.value; render(); };
+  $('#fRecMonth').onchange = e => { state.rec = e.target.value; renderRec(); };
+  document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('nav.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+    document.querySelectorAll('section.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + b.dataset.view));
+    state.view = b.dataset.view;
+  });
+}
+
+/* ---------- Render: visão geral ---------- */
+function kpi(lbl, val, cmp){ return `<div class="kpi"><div class="lbl">${esc(lbl)}</div><div class="val">${val}</div>${cmp?`<div class="cmp">${cmp}</div>`:''}</div>`; }
+function cmpTeam(v, t, f, higherBetter = true){
+  if(!isFinite(v) || !isFinite(t)) return '';
+  const better = higherBetter ? v >= t : v <= t;
+  return `Média da equipe: ${f(t)} <b class="${better?'up':'down'}">${better?'▲':'▼'}</b>`;
+}
+function renderGeral(){
+  const {s, e, agent} = state;
+  const agents = activeAgents(s, e);
+  const all = agents.map(a => stats(a, s, e));
+  const team = {};
+  for(const k of ['prod','prodDia','ef','tma','taxa','recAt','chA','chR','chTma','chTme','mon','sat','nps','res','dias']) team[k] = avg(all.map(x=>x[k]).filter(isFinite));
+  const saiu = TEAM.filter(t => t.saiu).map(t=>t.name);
+  $('#ctxGeral').innerHTML = `Período: <b>${fmtMonth(s)}</b> a <b>${fmtMonth(e)}</b>. Colaboradores ativos no período: ${agents.map(esc).join(', ') || 'nenhum'}.` +
+    (saiu.some(n => agents.includes(n)) ? ` ${saiu.map(esc).join(', ')} saiu do setor e aparece apenas enquanto teve registros.` : '');
+  let P, Q;
+  if(agent){
+    const o = stats(agent, s, e);
+    P = [kpi('Produtividade total', fmtInt(o.prod), cmpTeam(o.prod, team.prod, fmtInt)),
+      kpi('Produtividade por dia trabalhado', fmt1(o.prodDia), cmpTeam(o.prodDia, team.prodDia, fmt1)),
+      kpi('Dias trabalhados', fmtInt(o.dias), cmpTeam(o.dias, team.dias, fmt1)),
+      kpi('Chamadas efetivas (acima de 40s)', fmtInt(o.ef), `${fmtPct(o.taxa)} das ${fmtInt(o.real)} realizadas`),
+      kpi('TMA das chamadas efetivas', fmtDur(o.tma), cmpTeam(o.tma, team.tma, fmtDur, false)),
+      kpi('Recebidas atendidas', fmtInt(o.recAt), cmpTeam(o.recAt, team.recAt, fmt1)),
+      kpi('Chats ativos', fmtInt(o.chA), cmpTeam(o.chA, team.chA, fmt1)),
+      kpi('Chats receptivos', fmtInt(o.chR), `Espera média do cliente: ${fmtDur(o.chTme)}`)].join('');
+    Q = [kpi('Monitoria', fmtPct(o.mon), cmpTeam(o.mon, team.mon, fmtPct) + `<br>Chat ${fmtPct(o.monChat)} · Telefonia ${fmtPct(o.monTel)}`),
+      kpi('Satisfação', fmtPct(o.sat), cmpTeam(o.sat, team.sat, fmtPct) + `<br>${fmtInt(o.satN)} respostas`),
+      kpi('NPS (desde 25/08)', isFinite(o.nps) ? fmt1(o.nps) : '–', cmpTeam(o.nps, team.nps, fmt1) + `<br>${fmtInt(o.npsN)} respostas`),
+      kpi('Resolução (desde 25/08)', fmtPct(o.res), cmpTeam(o.res, team.res, fmtPct) + `<br>${fmtInt(o.resN)} respostas`)].join('');
+  } else {
+    const sum = k => all.reduce((x,o)=>x+o[k],0);
+    const real = sum('real'), ef = sum('ef'), efSec = sum('efSec');
+    const monAll = DB.mon.filter(m => agents.includes(m.agent) && inRange(m.mk, s, e));
+    const satAll = satStats(DB.sat.filter(x => agents.includes(x.agent) && inRange(x.mk, s, e)));
+    const na = monthList(s,e).reduce((x,m)=>x+(DB.recNA.get(m)||0),0);
+    P = [kpi('Produtividade total', fmtInt(sum('prod')), `Média por colaborador: ${fmt1(team.prod)}`),
+      kpi('Média por dia trabalhado', fmt1(team.prodDia), 'por colaborador'),
+      kpi('Chamadas efetivas (acima de 40s)', fmtInt(ef), `${fmtPct(real? ef/real*100 : NaN)} das ${fmtInt(real)} realizadas`),
+      kpi('TMA das chamadas efetivas', fmtDur(ef ? efSec/ef : NaN)),
+      kpi('Recebidas atendidas', fmtInt(sum('recAt')), `${fmtInt(na)} não atendidas`),
+      kpi('Chats ativos', fmtInt(sum('chA'))),
+      kpi('Chats receptivos', fmtInt(sum('chR')))].join('');
+    Q = [kpi('Monitoria', fmtPct(avg(monAll.map(m=>m.nota))), `${fmtInt(monAll.length)} avaliações`),
+      kpi('Satisfação', fmtPct(satAll.sat), `${fmtInt(satAll.satN)} respostas`),
+      kpi('NPS (desde 25/08)', isFinite(satAll.nps)? fmt1(satAll.nps):'–', `${fmtInt(satAll.npsN)} respostas`),
+      kpi('Resolução (desde 25/08)', fmtPct(satAll.res), `${fmtInt(satAll.resN)} respostas`)].join('');
+  }
+  $('#kpiProd').innerHTML = P; $('#kpiQual').innerHTML = Q;
+
+  // Tabela por colaborador
+  const rows = all.map(o => `<tr${state.agent===o.agent?' style="outline:2px solid var(--primary)"':''}><td>${esc(o.agent)}</td><td>${fmtInt(o.prod)}</td><td>${fmtInt(o.dias)}</td><td>${fmt1(o.prodDia)}</td><td>${fmtInt(o.ef)}</td><td>${fmtPct(o.taxa)}</td><td>${fmtDur(o.tma)}</td><td>${fmtInt(o.recAt)}</td><td>${fmtInt(o.chA)}</td><td>${fmtInt(o.chR)}</td><td>${fmtPct(o.mon)}</td><td>${fmtPct(o.sat)}</td><td>${isFinite(o.nps)?fmt1(o.nps):'–'}</td><td>${fmtPct(o.res)}</td><td>${o.infr?`<span class="tag bad">${o.infr}</span>`:'0'}</td></tr>`).join('');
+  $('#tblAgents').innerHTML = `<thead><tr><th>Colaborador</th><th>Produtividade</th><th>Dias</th><th>Por dia</th><th>Chamadas efetivas</th><th>Taxa efetiva</th><th>TMA ligação</th><th>Recebidas</th><th>Chat ativo</th><th>Chat receptivo</th><th>Monitoria</th><th>Satisfação</th><th>NPS</th><th>Resolução</th><th>Infrações descanso</th></tr></thead><tbody>${rows}
+    <tr class="avg"><td>Média da equipe</td><td>${fmt1(team.prod)}</td><td>${fmt1(team.dias)}</td><td>${fmt1(team.prodDia)}</td><td>${fmt1(team.ef)}</td><td>${fmtPct(team.taxa)}</td><td>${fmtDur(team.tma)}</td><td>${fmt1(team.recAt)}</td><td>${fmt1(team.chA)}</td><td>${fmt1(team.chR)}</td><td>${fmtPct(team.mon)}</td><td>${fmtPct(team.sat)}</td><td>${isFinite(team.nps)?fmt1(team.nps):'–'}</td><td>${fmtPct(team.res)}</td><td>${fmt1(avg(all.map(o=>o.infr)))}</td></tr></tbody>`;
+
+  // Gráficos
+  const months = monthList(s, e);
+  const series = agent ? [agent] : agents;
+  const ds = (fn) => series.map((a,i) => ({label:a, data:months.map(m => fn(a,m)), borderColor:cssVar(COLORS[TEAM.findIndex(t=>t.name===a)%5]), backgroundColor:cssVar(COLORS[TEAM.findIndex(t=>t.name===a)%5]), tension:.25, spanGaps:true}));
+  const teamLine = (fn) => ({label:'Média da equipe', data:months.map(m => avg(activeAgents(m,m).map(a=>fn(a,m)).filter(isFinite))), borderColor:cssVar('--muted'), borderDash:[6,4], backgroundColor:cssVar('--muted'), tension:.25, spanGaps:true});
+  const prodFn = (a,m) => { const o = stats(a,m,m); return o.dias ? o.prod : NaN; };
+  const monFn = (a,m) => avg(DB.mon.filter(x=>x.agent===a && x.mk===m).map(x=>x.nota));
+  drawChart('chProd', months, [...ds(prodFn), ...(agent?[teamLine(prodFn)]:[])], false, annotations(months));
+  drawChart('chMon', months, [...ds(monFn), ...(agent?[teamLine(monFn)]:[])], true);
+
+  // Ocorrências no período
+  const oc = DB.oc.filter(o => o.fim.slice(0,7) >= s && o.ini.slice(0,7) <= e && (!agent || o.quem === agent || norm(o.quem) === 'equipe'));
+  $('#ocGeral').innerHTML = ocList(oc);
+}
+function annotations(months){ return months.map(m => DB.oc.filter(o => o.ini.slice(0,7) <= m && o.fim.slice(0,7) >= m)); }
+function drawChart(id, labels, datasets, pct, notes){
+  charts[id]?.destroy();
+  const ink = cssVar('--muted'), grid = cssVar('--line');
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'line', data:{labels:labels.map(fmtMonth), datasets},
+    options:{responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
+      scales:{x:{ticks:{color:ink}, grid:{color:grid}}, y:{ticks:{color:ink, callback:v => pct ? v+'%' : v.toLocaleString('pt-BR')}, grid:{color:grid}, ...(pct?{suggestedMax:100}:{beginAtZero:true})}},
+      plugins:{legend:{labels:{color:ink, boxWidth:12}},
+        tooltip:{callbacks:{label:c => `${c.dataset.label}: ${pct ? fmtPct(c.parsed.y) : fmtInt(c.parsed.y)}`,
+          afterBody: items => { if(!notes) return ''; const n = notes[items[0].dataIndex] || []; return n.length ? ['', 'Ocorrências:', ...n.map(o => `• ${o.quem}: ${o.tipo}${o.just?' – '+o.just:''}`)] : ''; }}}},
+      elements:{point:{radius:4}}}
+  });
+}
+function ocList(oc){
+  if(!SOURCES.ocorrencias) return '<li class="muted">A aba de ocorrências ainda não foi conectada. Quando ela existir, cole o link CSV dela na configuração do painel (SOURCES.ocorrencias).</li>';
+  if(!oc.length) return '<li class="muted">Nenhuma ocorrência registrada neste período.</li>';
+  return oc.map(o => `<li><b>${esc(o.quem)}</b> · ${esc(fmtDay(o.ini))}${o.fim!==o.ini?' a '+esc(fmtDay(o.fim)):''} · ${esc(o.tipo)} ${o.impacto?`<span class="tag ${norm(o.impacto).startsWith('aum')?'good':'warn'}">${esc(o.impacto)}</span>`:''}<br><span class="muted">${esc(o.just)}</span></li>`).join('');
+}
+
+/* ---------- Render: pausas ---------- */
+function renderPausas(){
+  const {s, e, agent} = state;
+  const agents = agent ? [agent] : activeAgents(s, e);
+  const rows = agents.map(a => { const p = pauseStats(a, s, e);
+    const desc = DB.pausas.filter(x => x.agent===a && inRange(x.mk,s,e) && x.tipo.startsWith('descanso'));
+    const diasUteis = p.days.filter(d => d.dow !== 0 && d.dow !== 6).length;
+    return `<tr><td>${esc(a)}</td><td>${fmtInt(desc.length)}</td><td>${fmtDur(avg(desc.map(x=>x.sec)))}</td><td>${p.infr.length?`<span class="tag bad">${p.infr.length}</span>`:'0'}</td><td>${p.umDesc.length?`<span class="tag warn">${p.umDesc.length}</span>`:'0'}</td><td>${fmtInt(diasUteis)}</td><td>${p.part.length?`<span class="tag off">${p.part.length}</span>`:'0'}</td><td>${fmtDur(avg(p.days.map(d=>d.part)))}</td></tr>`; }).join('');
+  $('#tblPausaResumo').innerHTML = `<thead><tr><th>Colaborador</th><th>Pausas descanso</th><th>Duração média descanso</th><th>Infrações (acima de 15min30s)</th><th>Dias com um só descanso</th><th>Dias úteis com pausa</th><th>Dias com particular acima de 15 min</th><th>Particular médio por dia</th></tr></thead><tbody>${rows}</tbody>`;
+  const all = pauseStats(agent || null, s, e);
+  const filt = x => !agent ? TEAM.some(t=>t.name===x.agent) : x.agent === agent;
+  const infr = all.infr.filter(filt).sort((a,b)=> a.dk < b.dk ? 1 : -1);
+  $('#tblInfr').innerHTML = `<thead><tr><th>Colaborador</th><th>Data</th><th>Início</th><th>Duração</th><th>Excedeu</th></tr></thead><tbody>${infr.map(x=>`<tr><td>${esc(x.agent)}</td><td>${fmtDay(x.dk)}</td><td>${esc(x.hora)}</td><td>${fmtDur(x.sec)}</td><td>${fmtDur(x.sec-15*60)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nenhuma infração no período.</td></tr>'}</tbody>`;
+  const um = all.umDesc.filter(filt).sort((a,b)=> a.dk < b.dk ? 1 : -1);
+  $('#tblUmDesc').innerHTML = `<thead><tr><th>Colaborador</th><th>Data</th></tr></thead><tbody>${um.map(x=>`<tr><td>${esc(x.agent)}</td><td>${fmtDay(x.dk)}</td></tr>`).join('') || '<tr><td colspan="2" class="muted">Nenhum dia útil com só uma pausa descanso.</td></tr>'}</tbody>`;
+  const pt = all.part.filter(filt).sort((a,b)=> a.dk < b.dk ? 1 : -1);
+  $('#tblPart').innerHTML = `<thead><tr><th>Colaborador</th><th>Data</th><th>Particular no dia</th></tr></thead><tbody>${pt.map(x=>`<tr><td>${esc(x.agent)}</td><td>${fmtDay(x.dk)}</td><td>${fmtDur(x.part)}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Nenhum dia acima de 15 minutos.</td></tr>'}</tbody>`;
+}
+
+/* ---------- Render: sábados ---------- */
+function renderSabados(){
+  const {s, e, agent} = state;
+  const agents = agent ? [agent] : activeAgents(s, e);
+  const sats = new Set();
+  for(const a of agents) for(const d of (DB.days.get(a)?.values()||[])) if(d.dow === 6 && inRange(d.mk,s,e)) sats.add(d.dk);
+  const list = [...sats].sort().reverse();
+  const get = (a, dk) => DB.days.get(a)?.get(dk);
+  const prodOf = d => d ? d.ef + d.recAt + d.chA + d.chR : 0;
+  const resumo = agents.map(a => {
+    const all = [...(DB.days.get(a)?.values()||[])].filter(d => inRange(d.mk,s,e));
+    const sab = all.filter(d => d.dow === 6), uteis = all.filter(d => d.dow !== 6 && d.dow !== 0);
+    const pSab = avg(sab.map(prodOf)), pUtil = avg(uteis.map(prodOf));
+    return `<tr><td>${esc(a)}</td><td>${fmtInt(sab.length)}</td><td>${fmtInt(list.length - sab.length)}</td><td>${fmtInt(sab.reduce((x,d)=>x+prodOf(d),0))}</td><td>${fmt1(pSab)}</td><td>${fmt1(pUtil)}</td><td>${isFinite(pSab)&&pUtil?fmtPct(pSab/pUtil*100):'–'}</td></tr>`; }).join('');
+  $('#tblSabResumo').innerHTML = `<thead><tr><th>Colaborador</th><th>Sábados trabalhados</th><th>Folgas</th><th>Produtividade nos sábados</th><th>Média por sábado</th><th>Média por dia útil</th><th>Sábado vs dia útil</th></tr></thead><tbody>${resumo || '<tr><td colspan="7" class="muted">Sem sábados no período.</td></tr>'}</tbody>`;
+  $('#tblSab').innerHTML = `<thead><tr><th>Sábado</th>${agents.map(a=>`<th>${esc(a)}</th>`).join('')}</tr></thead><tbody>${list.map(dk => `<tr><td>${fmtDay(dk)}</td>${agents.map(a => { const d = get(a, dk);
+    if(!d) return '<td><span class="tag off">Folga</span></td>';
+    const p = prodOf(d); return `<td title="Chamadas efetivas ${d.ef} · Recebidas ${d.recAt} · Chat ativo ${d.chA} · Chat receptivo ${d.chR}">${p ? fmtInt(p) : '<span class="tag warn">0</span>'}<div class="muted" style="font-size:.72rem">${d.ef} lig · ${d.chA} ativo · ${d.chR} recep.</div></td>`; }).join('')}</tr>`).join('') || `<tr><td colspan="${agents.length+1}" class="muted">Sem sábados com registro no período.</td></tr>`}</tbody>`;
+}
+
+/* ---------- Render: reconhecimentos ---------- */
+function topOf(entries){ const best = Math.max(...entries.map(x=>x.v)); return entries.filter(x => x.v === best); }
+function joinNames(a){ return a.length <= 1 ? (a[0]||'') : a.slice(0,-1).join(', ') + ' e ' + a[a.length-1]; }
+function renderRec(){
+  const m = state.rec, prev = prevMonth(m);
+  // Monitoria
+  const monM = TEAM.map(t => ({n:t.name, v:avg(DB.mon.filter(x=>x.agent===t.name && x.mk===m).map(x=>x.nota))})).filter(x=>isFinite(x.v));
+  const monWin = monM.length ? topOf(monM) : [];
+  // Crescimento
+  const gr = TEAM.map(t => { const c = stats(t.name, m, m), p = stats(t.name, prev, prev); return {n:t.name, cur:c.prod, prev:p.prod, ok:c.dias>0 && p.dias>0 && p.prod>0, v:p.prod ? (c.prod-p.prod)/p.prod*100 : NaN}; }).filter(x => x.ok);
+  const grPos = gr.filter(x => x.v > 0); const grWin = grPos.length ? topOf(grPos) : [];
+  // Parceiro do mês
+  const resp = DB.form.filter(f => f.ref === m);
+  const parc = ALL_PEOPLE.map(p => { const v = resp.map(r => r.notas[p.name]).filter(isFinite); return {n:p.name, v:avg(v), qtd:v.length}; }).filter(x => x.qtd);
+  const parcWin = parc.length ? topOf(parc) : [];
+  // Atitude de impacto
+  const cit = {}; for(const r of resp) if(r.citado) cit[r.citado] = (cit[r.citado]||0)+1;
+  const citArr = Object.entries(cit).map(([n,v]) => ({n, v, media: parc.find(p=>p.n===n)?.v ?? -1}));
+  let atWin = citArr.length ? topOf(citArr) : [];
+  let desempate = false;
+  if(atWin.length > 1){ desempate = true; const bm = Math.max(...atWin.map(x=>x.media)); atWin = atWin.filter(x => x.media === bm); }
+  const atitudes = resp.filter(r => atWin.some(w => w.n === r.citado) && r.atitude);
+
+  const card = (kind, who, why, extra='') => `<div class="award"><div class="kind">${kind}</div>${who ? `<div class="who">${esc(who)}</div><div class="why">${why}</div>` : `<div class="none">${why}</div>`}${extra}</div>`;
+  $('#awards').innerHTML = [
+    card('Destaque em Monitoria', joinNames(monWin.map(x=>x.n)), monWin.length ? `Média de ${fmtPct(monWin[0].v)} nas monitorias de ${fmtMonth(m)}.` : 'Sem monitorias registradas neste mês.'),
+    card('Destaque em Crescimento', joinNames(grWin.map(x=>x.n)), grWin.length ? `Produtividade cresceu ${fmtPct(grWin[0].v)} de ${fmtMonth(prev)} para ${fmtMonth(m)} (${fmtInt(grWin[0].prev)} → ${fmtInt(grWin[0].cur)}).` : `Ninguém aumentou a produtividade de ${fmtMonth(prev)} para ${fmtMonth(m)}.`),
+    card('Parceiro do Mês', joinNames(parcWin.map(x=>x.n)), parcWin.length ? `Média de ${parcWin[0].v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})} nas avaliações dos colegas${parcWin.length>1?' (empate, os dois são reconhecidos)':''}.` : 'Não houve votação referente a este mês.'),
+    card('Atitude de Impacto', joinNames(atWin.map(x=>x.n)), atWin.length ? `${atWin[0].v} ${atWin[0].v>1?'citações':'citação'} como colega de maior impacto positivo${desempate?', com desempate pela média no Parceiro do Mês':''}.` : 'Não houve votação referente a este mês.',
+      atitudes.length ? `<ul>${atitudes.map(r => `<li>“${esc(r.atitude)}”</li>`).join('')}</ul>` : '')
+  ].join('');
+
+  // Tabelas de apoio
+  const months = [...DB.months].filter(x => DB.mon.some(y=>y.mk===x)).sort();
+  $('#tblMonWin').innerHTML = `<thead><tr><th>Mês</th><th>Destaque</th><th>Média</th></tr></thead><tbody>${months.map(mm => { const r = TEAM.map(t => ({n:t.name, v:avg(DB.mon.filter(x=>x.agent===t.name && x.mk===mm).map(x=>x.nota))})).filter(x=>isFinite(x.v)); const w = topOf(r);
+    return `<tr${mm===m?' class="avg"':''}><td>${fmtMonth(mm)}</td><td>${esc(joinNames(w.map(x=>x.n)))}</td><td>${fmtPct(w[0]?.v)}</td></tr>`; }).join('')}</tbody>`;
+  $('#tblGrowth').innerHTML = `<thead><tr><th>Colaborador</th><th>${fmtMonth(prev)}</th><th>${fmtMonth(m)}</th><th>Variação</th></tr></thead><tbody>${gr.sort((a,b)=>b.v-a.v).map(x => `<tr><td>${esc(x.n)}</td><td>${fmtInt(x.prev)}</td><td>${fmtInt(x.cur)}</td><td><span class="tag ${x.v>0?'good':'bad'}">${x.v>0?'+':''}${fmtPct(x.v)}</span></td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sem dados nos dois meses.</td></tr>'}</tbody>`;
+  $('#tblParc').innerHTML = `<thead><tr><th>Colaborador</th><th>Média</th><th>Avaliações</th></tr></thead><tbody>${parc.sort((a,b)=>b.v-a.v).map(x => `<tr><td>${esc(x.n)}</td><td>${x.v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${x.qtd}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sem respostas para este mês.</td></tr>'}</tbody>`;
+  $('#tblAtit').innerHTML = `<thead><tr><th>Colaborador</th><th>Citações</th><th>Média Parceiro</th></tr></thead><tbody>${citArr.sort((a,b)=>b.v-a.v || b.media-a.media).map(x => `<tr><td>${esc(x.n)}</td><td>${x.v}</td><td>${x.media>=0 ? x.media.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '–'}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sem respostas para este mês.</td></tr>'}</tbody>`;
+}
+
+function render(){ renderGeral(); renderPausas(); renderSabados(); renderRec(); $('#ocAll').innerHTML = ocList(DB.oc.filter(o => !state.agent || o.quem === state.agent || norm(o.quem)==='equipe')); }
+
+/* ---------- Tema ---------- */
+$('#btnTheme').onclick = () => {
+  const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme = dark ? 'light' : 'dark';
+  try{ localStorage.setItem('cr-tema', r.dataset.theme); }catch(e){}
+  if(!$('#app').hidden) render();
+};
+try{ const t = localStorage.getItem('cr-tema'); if(t) document.documentElement.dataset.theme = t; }catch(e){}
+
+/* ---------- Início ---------- */
+(async () => {
+  try{
+    const names = {realizadas:'Chamadas realizadas', recebidas:'Chamadas recebidas', chat:'Chat', satisfacao:'Satisfação', monitoria:'Monitoria', pausa:'Pausa', parceiro:'Parceiro do Mês', ocorrencias:'Ocorrências'};
+    const keys = Object.keys(SOURCES).filter(k => SOURCES[k]);
+    const data = await Promise.all(keys.map(k => load(names[k], SOURCES[k])));
+    const raw = {}; keys.forEach((k,i) => raw[k] = data[i]);
+    ingest(raw);
+    if(!DB.months.size) throw new Error('Nenhum dado da equipe encontrado. Confira se as abas estão publicadas e se os nomes dos colaboradores estão corretos.');
+    setupFilters(); $('#loading').hidden = true; $('#app').hidden = false; render();
+    $('#updated').textContent = 'Dados lidos da planilha em ' + new Date().toLocaleString('pt-BR');
+  }catch(err){
+    $('#error').style.display = 'block';
+    $('#error').textContent = 'Não foi possível carregar o painel. ' + err.message + ' Verifique em Arquivo > Compartilhar > Publicar na Web se a planilha continua publicada.';
+    $('#loading').hidden = true;
+  }
+})();
+</script>
+</body>
+</html>
