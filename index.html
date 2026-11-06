@@ -851,7 +851,7 @@ function renderRec(){
 }
 
 /* ---------- Arte dos reconhecimentos (imagem para o grupo) ---------- */
-const MESES_LONGOS = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const MESES_LONGOS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 const iconImg = (n, color) => loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`));
 function rr(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
@@ -886,13 +886,13 @@ async function makeArt(m){
   ctx.textAlign = 'left'; ctx.fillStyle = '#FF8A4C'; ctx.font = `600 26px ${SANS}`;
   ctx.save(); ctx.letterSpacing = '5px'; ctx.fillText('RECONHECIMENTOS DO MÊS', 64, 200); ctx.restore();
   ctx.fillStyle = '#FFFFFF'; ctx.font = `600 76px ${SERIF}`; ctx.fillText(`Destaques de ${mes}`, 64, 285);
-  ctx.fillStyle = '#A3A7B5'; ctx.font = `400 28px ${SANS}`; ctx.fillText(`${mes[0].toUpperCase() + mes.slice(1)} de ${y} · parabéns pelo trabalho!`, 64, 335);
+  ctx.fillStyle = '#A3A7B5'; ctx.font = `400 28px ${SANS}`; ctx.fillText(`${mes} de ${y} · Parabéns pelo trabalho!`, 64, 335);
   // cards 2x2
   const cards = [
-    {ico:'check', t:'Destaque em Monitoria', w:A.mon.win.map(x=>x.n), metric:A.mon.win.length ? fmtPct(A.mon.win[0].v) : '', sub:'maior média nas monitorias', none:'Sem monitorias no mês'},
-    {ico:'chart', t:'Destaque em Crescimento', w:A.cres.win.map(x=>x.n), metric:A.cres.win.length ? '+' + fmtPct(A.cres.win[0].v) : '', sub:`produtividade sobre ${MESES_LONGOS[+prevMonth(m).slice(5)-1]}`, none:'Ninguém aumentou a produtividade'},
-    {ico:'users', t:'Parceiro do Mês', w:A.par.win.map(x=>x.n), metric:A.par.win.length ? fmt2(A.par.win[0].v) : '', sub:'média na avaliação dos colegas', none:'Sem votação no mês'},
-    {ico:'trophy', t:'Atitude de Impacto', w:A.at.win.map(x=>x.n), metric:A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '', sub:'mais citado pelos colegas', none:'Sem votação no mês', quote:A.at.atitudes[0]}
+    {ico:'check', t:'Destaque em Monitoria', w:A.mon.win.map(x=>x.n), metric:A.mon.win.length ? fmtPct(A.mon.win[0].v) : '', sub:'Maior média nas monitorias', none:'Sem monitorias no mês'},
+    {ico:'chart', t:'Destaque em Crescimento', w:A.cres.win.map(x=>x.n), metric:A.cres.win.length ? '+' + fmtPct(A.cres.win[0].v) : '', sub:`Produtividade sobre ${MESES_LONGOS[+prevMonth(m).slice(5)-1]}`, none:'Ninguém aumentou a produtividade'},
+    {ico:'users', t:'Parceiro do Mês', w:A.par.win.map(x=>x.n), metric:A.par.win.length ? fmt2(A.par.win[0].v) : '', sub:'Média na avaliação dos colegas', none:'Sem votação no mês'},
+    {ico:'trophy', t:'Atitude de Impacto', w:A.at.win.map(x=>x.n), metric:A.at.win.length ? `${A.at.win[0].v} ${A.at.win[0].v>1?'citações':'citação'}` : '', sub:'Mais citado pelos colegas', none:'Sem votação no mês', quote:A.at.atitudes[0]}
   ];
   const CW = 460, CH = 410, GX = 28, X0 = 64, Y0 = 385;
   for(let i = 0; i < 4; i++){
